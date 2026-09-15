@@ -1,61 +1,80 @@
 from datetime import date
 
-import pytest
-
-from models.festivals import add_festival
-from models.organizers import add_organizer
-from models.schedule import cancel_booking, create_booking, is_venue_available
-from models.venues import add_venue
+from models.festivals import Festival
+from models.organizers import Organizer
+from models.schedule import Booking, cancel_booking, create_booking, is_venue_available
+from models.venues import Venue
 
 
-def make_data():
-    organizers = {}
-    add_organizer(organizers, "АНО «Арт-Ивент»")
-    venues = {}
-    add_venue(venues, "Городской парк", 5000)
-    festivals = {}
-    add_festival(
-        festivals, organizers, "Фестиваль уличной музыки", date(2026, 9, 15), 4500, 1,
-    )
-    return organizers, venues, festivals
+def make_data() -> tuple[Festival, Venue]:
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    venue = Venue(1, "Городской парк", 5000)
+    festival = Festival(1, "Фестиваль уличной музыки", date(2026, 9, 15), 4500, organizer)
+    return festival, venue
+
+
+def test_booking_creation():
+    festival, venue = make_data()
+    booking = Booking(1, festival, venue)
+    assert booking.id == 1
+    assert booking.festival is festival
+    assert booking.venue is venue
+    assert not booking.is_cancelled
+
+
+def test_booking_status_property():
+    festival, venue = make_data()
+    booking = Booking(1, festival, venue)
+    assert booking.status == "активно"
+    booking.cancel()
+    assert booking.status == "отменено"
+    assert booking.is_cancelled
 
 
 def test_is_venue_available_when_no_bookings():
-    _, venues, festivals = make_data()
-    bookings = []
-    assert is_venue_available(bookings, festivals, 1, date(2026, 9, 15))
+    festival, venue = make_data()
+    bookings: list[Booking] = []
+    assert is_venue_available(bookings, venue, date(2026, 9, 15))
 
 
 def test_create_booking_and_duplicate_forbidden():
-    _, venues, festivals = make_data()
-    bookings = []
-    create_booking(bookings, festivals, venues, 1, 1)
-    assert not is_venue_available(bookings, festivals, 1, date(2026, 9, 15))
+    festival, venue = make_data()
+    bookings: list[Booking] = []
+    create_booking(bookings, festival, venue)
+    assert not is_venue_available(bookings, venue, date(2026, 9, 15))
 
 
-def test_create_booking_over_capacity_raises_error():
-    organizers, venues, festivals = make_data()
-    add_venue(venues, "Малый зал", 100)
-    bookings = []
-    with pytest.raises(ValueError):
-        create_booking(bookings, festivals, venues, 1, 2)
-
-
-def test_create_booking_duplicate_date_raises_error():
-    organizers, venues, festivals = make_data()
-    add_festival(
-        festivals, organizers, "Другой фестиваль", date(2026, 9, 15), 1000, 1,
-    )
-    bookings = []
-    create_booking(bookings, festivals, venues, 1, 1)
-    with pytest.raises(ValueError):
-        create_booking(bookings, festivals, venues, 2, 1)
-
-
-def test_cancel_booking():
-    _, venues, festivals = make_data()
-    bookings = []
-    booking = create_booking(bookings, festivals, venues, 1, 1)
-    assert cancel_booking(bookings, booking["id"])
+def test_create_booking_over_capacity_returns_none():
+    festival, venue = make_data()
+    small_venue = Venue(2, "Малый зал", 100)
+    bookings: list[Booking] = []
+    assert create_booking(bookings, festival, small_venue) is None
     assert bookings == []
-    assert not cancel_booking(bookings, booking["id"])
+
+
+def test_create_booking_duplicate_date_returns_none():
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    venue = Venue(1, "Городской парк", 5000)
+    festival_1 = Festival(1, "Фестиваль уличной музыки", date(2026, 9, 15), 4500, organizer)
+    festival_2 = Festival(2, "Другой фестиваль", date(2026, 9, 15), 1000, organizer)
+    bookings: list[Booking] = []
+    create_booking(bookings, festival_1, venue)
+    assert create_booking(bookings, festival_2, venue) is None
+
+
+def test_cancelled_booking_frees_the_venue():
+    festival, venue = make_data()
+    bookings: list[Booking] = []
+    booking = create_booking(bookings, festival, venue)
+    booking.cancel()
+    assert is_venue_available(bookings, venue, date(2026, 9, 15))
+
+
+def test_cancel_booking_by_id():
+    festival, venue = make_data()
+    bookings: list[Booking] = []
+    booking = create_booking(bookings, festival, venue)
+    assert cancel_booking(bookings, booking.id)
+    assert booking.is_cancelled
+    assert booking in bookings
+    assert not cancel_booking(bookings, 99)

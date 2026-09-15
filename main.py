@@ -1,14 +1,10 @@
 """Точка запуска сервиса управления фестивальными площадками."""
 
+from models import Booking, Festival, Organizer, Venue
 from models.festivals import add_festival, find_festival, sort_festivals_by_date
-from models.organizers import add_organizer, iter_organizers
+from models.organizers import add_organizer
 from models.schedule import cancel_booking, create_booking
-from models.venues import (
-    check_venue_capacity,
-    filter_venues_by_capacity,
-    find_venue,
-    sort_venues,
-)
+from models.venues import filter_venues_by_capacity, find_venue, get_venue, sort_venues
 from storage import (
     load_bookings,
     load_festivals,
@@ -21,57 +17,73 @@ from storage import (
 )
 from utils import describe_function, input_date, input_int
 
+
 VENUES_FILE = "data/venues.json"
 ORGANIZERS_FILE = "data/organizers.json"
 FESTIVALS_FILE = "data/festivals.json"
 BOOKINGS_FILE = "data/bookings.json"
 
 
-def show_venues(venues: dict[int, dict]) -> None:
+def show_venues(venues: list[Venue]) -> None:
     """Вывести список площадок."""
     if not venues:
         print("Список площадок пуст.")
         return
-    for venue in venues.values():
-        print(f'{venue["id"]}. {venue["name"]} — вместимость {venue["capacity"]} чел.')
+    for venue in venues:
+        print(f"{venue.id}. {venue}")
 
 
-def show_organizers(organizers: dict[int, dict]) -> None:
+def show_organizers(organizers: list[Organizer]) -> None:
     """Вывести список организаторов."""
     if not organizers:
         print("Список организаторов пуст.")
         return
-    for organizer in iter_organizers(organizers):
-        print(f'{organizer["id"]}. {organizer["name"]}')
+    for organizer in organizers:
+        print(f"{organizer.id}. {organizer}")
 
 
-def show_festivals(festivals: dict[int, dict], organizers: dict[int, dict]) -> None:
-    """Вывести список фестивалей с указанием организатора."""
+def show_festivals(festivals: list[Festival]) -> None:
+    """Вывести список фестивалей."""
     if not festivals:
         print("Список фестивалей пуст.")
         return
-    for festival in festivals.values():
-        organizer = organizers.get(festival["organizer_id"], {})
-        organizer_name = organizer.get("name", "неизвестный организатор")
-        print(
-            f'{festival["id"]}. {festival["name"]} — {festival["date"]}, '
-            f'{festival["expected_attendees"]} посетителей, организатор: {organizer_name}'
-        )
+    for festival in festivals:
+        print(f"{festival.id}. {festival}")
 
 
-def show_bookings(
-    bookings: list[dict], festivals: dict[int, dict], venues: dict[int, dict]
-) -> None:
-    """Вывести расписание с указанием фестиваля и площадки."""
+def show_bookings(bookings: list[Booking]) -> None:
+    """Вывести расписание бронирований."""
     if not bookings:
         print("Расписание пусто.")
         return
     for booking in bookings:
-        festival = festivals.get(booking["festival_id"], {})
-        venue = venues.get(booking["venue_id"], {})
-        festival_name = festival.get("name", "неизвестный фестиваль")
-        venue_name = venue.get("name", "неизвестная площадка")
-        print(f'{booking["id"]}. {festival_name} → {venue_name}, {festival.get("date", "?")}')
+        print(f"{booking.id}. {booking}")
+
+
+def create_new_booking(
+    bookings: list[Booking], festivals: list[Festival], venues: list[Venue]
+) -> None:
+    """Пользовательский сценарий бронирования: найти фестиваль и площадку, создать запись."""
+    festival_id = input_int("Идентификатор фестиваля: ")
+    venue_id = input_int("Идентификатор площадки: ")
+
+    try:
+        festival = next(f for f in festivals if f.id == festival_id)
+    except StopIteration:
+        print(f"Фестиваль с id={festival_id} не найден.")
+        return
+    try:
+        venue = next(v for v in venues if v.id == venue_id)
+    except StopIteration:
+        print(f"Площадка с id={venue_id} не найдена.")
+        return
+
+    booking = create_booking(bookings, festival, venue)
+    if booking is None:
+        print("Не удалось создать бронирование: площадка не подходит по вместимости")
+        print("или уже занята другим фестивалем на эту дату.")
+    else:
+        print(f"Бронирование создано, id={booking.id}")
 
 
 def print_menu() -> None:
@@ -99,8 +111,8 @@ def main() -> None:
     """Точка запуска приложения: цикл меню и вызов функций проекта."""
     venues = load_venues(VENUES_FILE)
     organizers = load_organizers(ORGANIZERS_FILE)
-    festivals = load_festivals(FESTIVALS_FILE)
-    bookings = load_bookings(BOOKINGS_FILE)
+    festivals = load_festivals(FESTIVALS_FILE, organizers)
+    bookings = load_bookings(BOOKINGS_FILE, festivals, venues)
 
     while True:
         print_menu()
@@ -119,12 +131,12 @@ def main() -> None:
 
         elif choice == "2":
             for venue in sort_venues(venues):
-                print(f'{venue["name"]} — {venue["capacity"]} чел.')
+                print(venue)
 
         elif choice == "3":
             min_capacity = input_int("Минимальная вместимость: ")
             for venue in filter_venues_by_capacity(venues, min_capacity):
-                print(f'{venue["name"]} — {venue["capacity"]} чел.')
+                print(venue)
 
         elif choice == "4":
             query = input("Название или часть названия: ")
@@ -132,13 +144,14 @@ def main() -> None:
             if not found:
                 print("Площадки не найдены.")
             for venue in found:
-                print(f'{venue["id"]}. {venue["name"]} — {venue["capacity"]} чел.')
+                print(f"{venue.id}. {venue}")
 
         elif choice == "5":
             venue_id = input_int("Идентификатор площадки: ")
             attendees = input_int("Ожидаемое число посетителей: ")
             try:
-                suitable = check_venue_capacity(venues, venue_id, attendees)
+                venue = get_venue(venues, venue_id)
+                suitable = venue.is_suitable_for(attendees)
                 print("Подходит по вместимости" if suitable else "Вместимость превышена")
             except KeyError as error:
                 print(error)
@@ -148,11 +161,11 @@ def main() -> None:
 
         elif choice == "7":
             name = input("Название организатора: ")
-            organizer_id = add_organizer(organizers, name)
-            print(f"Организатор добавлен, id={organizer_id}")
+            organizer = add_organizer(organizers, name)
+            print(f"Организатор добавлен, id={organizer.id}")
 
         elif choice == "8":
-            show_festivals(festivals, organizers)
+            show_festivals(festivals)
 
         elif choice == "9":
             name = input("Название фестиваля: ")
@@ -160,10 +173,10 @@ def main() -> None:
             attendees = input_int("Ожидаемое число посетителей: ")
             organizer_id = input_int("Идентификатор организатора: ")
             try:
-                festival_id = add_festival(
+                festival = add_festival(
                     festivals, organizers, name, festival_date, attendees, organizer_id,
                 )
-                print(f"Фестиваль добавлен, id={festival_id}")
+                print(f"Фестиваль добавлен, id={festival.id}")
             except KeyError as error:
                 print(error)
 
@@ -173,20 +186,14 @@ def main() -> None:
             if not found:
                 print("Фестивали не найдены.")
             for festival in found:
-                print(f'{festival["id"]}. {festival["name"]} — {festival["date"]}')
+                print(f"{festival.id}. {festival}")
 
         elif choice == "11":
             for festival in sort_festivals_by_date(festivals):
-                print(f'{festival["date"]} — {festival["name"]}')
+                print(festival)
 
         elif choice == "12":
-            festival_id = input_int("Идентификатор фестиваля: ")
-            venue_id = input_int("Идентификатор площадки: ")
-            try:
-                booking = create_booking(bookings, festivals, venues, festival_id, venue_id)
-                print(f'Бронирование создано, id={booking["id"]}')
-            except (KeyError, ValueError) as error:
-                print(f"Не удалось создать бронирование: {error}")
+            create_new_booking(bookings, festivals, venues)
 
         elif choice == "13":
             booking_id = input_int("Идентификатор бронирования: ")
@@ -196,7 +203,7 @@ def main() -> None:
                 print("Бронирование не найдено.")
 
         elif choice == "14":
-            show_bookings(bookings, festivals, venues)
+            show_bookings(bookings)
 
         elif choice == "15":
             print(describe_function(create_booking))
