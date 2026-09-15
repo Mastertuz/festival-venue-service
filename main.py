@@ -1,9 +1,14 @@
 """Точка запуска сервиса управления фестивальными площадками."""
 
 from models import Booking, Festival, Organizer, Venue
-from models.festivals import add_festival, find_festival, sort_festivals_by_date
+from models.festivals import add_festival, find_festival, get_festival, sort_festivals_by_date
 from models.organizers import add_organizer
-from models.schedule import cancel_booking, create_booking
+from models.schedule import (
+    cancel_booking,
+    check_venue_suitability,
+    create_booking,
+    is_venue_available,
+)
 from models.venues import filter_venues_by_capacity, find_venue, get_venue, sort_venues
 from storage import (
     load_bookings,
@@ -68,14 +73,10 @@ def create_new_booking(
     venue_id = input_int("Идентификатор площадки: ")
 
     try:
-        festival = next(f for f in festivals if f.id == festival_id)
-    except StopIteration:
-        print(f"Фестиваль с id={festival_id} не найден.")
-        return
-    try:
-        venue = next(v for v in venues if v.id == venue_id)
-    except StopIteration:
-        print(f"Площадка с id={venue_id} не найдена.")
+        festival = get_festival(festivals, festival_id)
+        venue = get_venue(venues, venue_id)
+    except KeyError as error:
+        print(error)
         return
 
     booking = create_booking(bookings, festival, venue)
@@ -94,16 +95,17 @@ def print_menu() -> None:
     print("3. Показать площадки с вместимостью не менее N")
     print("4. Найти площадку по названию")
     print("5. Проверить вместимость площадки")
-    print("6. Показать организаторов")
-    print("7. Добавить организатора")
-    print("8. Показать фестивали")
-    print("9. Добавить фестиваль")
-    print("10. Найти фестиваль по названию")
-    print("11. Показать фестивали, отсортированные по дате")
-    print("12. Забронировать площадку для фестиваля")
-    print("13. Отменить бронирование")
-    print("14. Показать расписание")
-    print("15. Информация о функции (интроспекция)")
+    print("6. Проверить доступность площадки на дату фестиваля")
+    print("7. Показать организаторов")
+    print("8. Добавить организатора")
+    print("9. Показать фестивали")
+    print("10. Добавить фестиваль")
+    print("11. Найти фестиваль по названию")
+    print("12. Показать фестивали, отсортированные по дате")
+    print("13. Забронировать площадку для фестиваля")
+    print("14. Отменить бронирование")
+    print("15. Показать расписание")
+    print("16. Информация о функции (интроспекция)")
     print("0. Выход")
 
 
@@ -157,17 +159,32 @@ def main() -> None:
                 print(error)
 
         elif choice == "6":
-            show_organizers(organizers)
+            festival_id = input_int("Идентификатор фестиваля: ")
+            venue_id = input_int("Идентификатор площадки: ")
+            try:
+                festival = get_festival(festivals, festival_id)
+                venue = get_venue(venues, venue_id)
+            except KeyError as error:
+                print(error)
+            else:
+                available = is_venue_available(bookings, venue, festival.date)
+                status = check_venue_suitability(
+                    venue.capacity, festival.expected_attendees, available,
+                )
+                print(status)
 
         elif choice == "7":
+            show_organizers(organizers)
+
+        elif choice == "8":
             name = input("Название организатора: ")
             organizer = add_organizer(organizers, name)
             print(f"Организатор добавлен, id={organizer.id}")
 
-        elif choice == "8":
+        elif choice == "9":
             show_festivals(festivals)
 
-        elif choice == "9":
+        elif choice == "10":
             name = input("Название фестиваля: ")
             festival_date = input_date("Дата (ДД.ММ.ГГГГ): ")
             attendees = input_int("Ожидаемое число посетителей: ")
@@ -180,7 +197,7 @@ def main() -> None:
             except KeyError as error:
                 print(error)
 
-        elif choice == "10":
+        elif choice == "11":
             query = input("Название или часть названия: ")
             found = find_festival(festivals, query)
             if not found:
@@ -188,24 +205,24 @@ def main() -> None:
             for festival in found:
                 print(f"{festival.id}. {festival}")
 
-        elif choice == "11":
+        elif choice == "12":
             for festival in sort_festivals_by_date(festivals):
                 print(festival)
 
-        elif choice == "12":
+        elif choice == "13":
             create_new_booking(bookings, festivals, venues)
 
-        elif choice == "13":
+        elif choice == "14":
             booking_id = input_int("Идентификатор бронирования: ")
             if cancel_booking(bookings, booking_id):
                 print("Бронирование отменено.")
             else:
                 print("Бронирование не найдено.")
 
-        elif choice == "14":
+        elif choice == "15":
             show_bookings(bookings)
 
-        elif choice == "15":
+        elif choice == "16":
             print(describe_function(create_booking))
 
         else:

@@ -2,7 +2,13 @@ from datetime import date
 
 from models.festivals import Festival
 from models.organizers import Organizer
-from models.schedule import Booking, cancel_booking, create_booking, is_venue_available
+from models.schedule import (
+    Booking,
+    cancel_booking,
+    check_venue_suitability,
+    create_booking,
+    is_venue_available,
+)
 from models.venues import Venue
 
 
@@ -11,6 +17,15 @@ def make_data() -> tuple[Festival, Venue]:
     venue = Venue(1, "Городской парк", 5000)
     festival = Festival(1, "Фестиваль уличной музыки", date(2026, 9, 15), 4500, organizer)
     return festival, venue
+
+
+def test_check_venue_suitability():
+    suitable = check_venue_suitability(5000, 4500, True)
+    over_capacity = check_venue_suitability(5000, 6000, True)
+    unavailable = check_venue_suitability(5000, 4500, False)
+    assert suitable == "Площадка подходит для проведения фестиваля"
+    assert over_capacity == "Площадка не подходит: вместимость превышена"
+    assert unavailable == "Площадка недоступна на выбранную дату"
 
 
 def test_booking_creation():
