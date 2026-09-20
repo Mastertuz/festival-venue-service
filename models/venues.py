@@ -3,6 +3,38 @@
 from collections.abc import Iterator
 
 
+class Venue:
+    """Площадка, доступная для проведения фестиваля."""
+
+    def __init__(self, venue_id: int, name: str, capacity: int) -> None:
+        """Создать объект площадки."""
+        self.id = venue_id
+        self.name = name
+        self.capacity = capacity
+
+    def is_suitable_for(self, expected_attendees: int) -> bool:
+        """Проверить, что вместимость площадки не меньше ожидаемого числа посетителей."""
+        return self.capacity >= expected_attendees
+
+    def __str__(self) -> str:
+        """Вернуть удобное строковое представление площадки."""
+        return f"{self.name} (вместимость {self.capacity} чел.)"
+
+    @staticmethod
+    def validate_capacity(capacity: int) -> bool:
+        """Проверить корректность значения вместимости (должно быть положительным)."""
+        return capacity > 0
+
+    @classmethod
+    def from_data(cls, data: dict) -> "Venue":
+        """Создать площадку из словаря данных (например, загруженного из JSON)."""
+        return cls(data["id"], data["name"], data["capacity"])
+
+    def to_data(self) -> dict:
+        """Представить площадку в виде словаря для сохранения в JSON."""
+        return {"id": self.id, "name": self.name, "capacity": self.capacity}
+
+
 def add_venue(venues: dict[int, dict], name: str, capacity: int) -> int:
     """Добавить площадку в словарь venues и вернуть её идентификатор."""
     venue_id = max(venues.keys(), default=0) + 1

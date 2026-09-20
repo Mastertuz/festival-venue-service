@@ -1,4 +1,5 @@
 from models.venues import (
+    Venue,
     add_venue,
     check_venue_capacity,
     filter_venues_by_capacity,
@@ -42,3 +43,33 @@ def test_sort_venues():
     add_venue(venues, "Малый зал", 300)
     result = sort_venues(venues)
     assert [venue["capacity"] for venue in result] == [300, 5000]
+
+
+def test_venue_creation():
+    venue = Venue(1, "Городской парк", 5000)
+    assert venue.id == 1
+    assert venue.name == "Городской парк"
+    assert venue.capacity == 5000
+
+
+def test_venue_is_suitable_for():
+    venue = Venue(1, "Городской парк", 5000)
+    assert venue.is_suitable_for(4500)
+    assert not venue.is_suitable_for(6000)
+
+
+def test_venue_str():
+    venue = Venue(1, "Городской парк", 5000)
+    assert str(venue) == "Городской парк (вместимость 5000 чел.)"
+
+
+def test_venue_validate_capacity():
+    assert Venue.validate_capacity(30)
+    assert not Venue.validate_capacity(0)
+    assert not Venue.validate_capacity(-5)
+
+
+def test_venue_from_data_and_to_data_roundtrip():
+    data = {"id": 1, "name": "Городской парк", "capacity": 5000}
+    venue = Venue.from_data(data)
+    assert venue.to_data() == data
