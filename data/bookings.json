@@ -2,6 +2,7 @@
   {
     "id": 1,
     "festival_id": 1,
-    "venue_id": 1
+    "venue_id": 1,
+    "is_cancelled": false
   }
 ]
