@@ -1,6 +1,4 @@
-"""Функции для работы с организаторами фестивалей."""
-
-from collections.abc import Iterator
+"""Класс Organizer (организатор) и функции для работы с коллекцией организаторов."""
 
 
 class Organizer:
@@ -25,30 +23,35 @@ class Organizer:
         return {"id": self.id, "name": self.name}
 
 
-def add_organizer(organizers: dict[int, dict], name: str) -> int:
-    """Добавить организатора в словарь organizers и вернуть его идентификатор."""
-    organizer_id = max(organizers.keys(), default=0) + 1
-    organizers[organizer_id] = {"id": organizer_id, "name": name}
-    return organizer_id
+def add_organizer(organizers: list[Organizer], name: str) -> Organizer:
+    """Создать организатора, добавить его в коллекцию organizers и вернуть объект."""
+    organizer_id = max((org.id for org in organizers), default=0) + 1
+    organizer = Organizer(organizer_id, name)
+    organizers.append(organizer)
+    return organizer
 
 
-def iter_organizers(organizers: dict[int, dict]) -> Iterator[dict]:
-    """Генератор, последовательно возвращающий данные организаторов."""
-    for organizer in organizers.values():
-        yield organizer
+def show_organizers(organizers: list[Organizer]) -> None:
+    """Вывести информацию об объектах Organizer."""
+    if not organizers:
+        print("Список организаторов пуст.")
+        return
+    for organizer in organizers:
+        print(f"{organizer.id}. {organizer}")
 
 
-def find_organizer(organizers: dict[int, dict], query: str) -> list[dict]:
+def find_organizer(organizers: list[Organizer], query: str) -> list[Organizer]:
     """Найти организаторов, в названии которых встречается подстрока query."""
     query_lower = query.lower()
-    return [org for org in iter_organizers(organizers) if query_lower in org["name"].lower()]
+    return [org for org in organizers if query_lower in org.name.lower()]
 
 
-def get_organizer(organizers: dict[int, dict], organizer_id: int) -> dict:
+def get_organizer(organizers: list[Organizer], organizer_id: int) -> Organizer:
     """Вернуть организатора по идентификатору.
 
     Вызывает KeyError, если организатор с таким id не найден.
     """
-    if organizer_id not in organizers:
-        raise KeyError(f"Организатор с id={organizer_id} не найден")
-    return organizers[organizer_id]
+    for organizer in organizers:
+        if organizer.id == organizer_id:
+            return organizer
+    raise KeyError(f"Организатор с id={organizer_id} не найден")

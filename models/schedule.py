@@ -1,9 +1,10 @@
-"""Функции для работы с расписанием: привязкой фестиваля к площадке на дату."""
+"""Класс Booking (запись расписания) и функции для работы с коллекцией бронирований."""
 
 from datetime import date
+from typing import Optional
 
-from models.festivals import Festival, get_festival
-from models.venues import Venue, get_venue
+from .festivals import Festival
+from .venues import Venue
 
 
 class Booking:
@@ -51,62 +52,67 @@ class Booking:
         }
 
 
-def check_venue_suitability(capacity: int, attendees: int, is_available: bool) -> str:
-    """Вернуть текстовый статус площадки (функция из ПР1, без изменений логики)."""
-    if not is_available:
+def is_venue_available(bookings: list[Booking], venue: Venue, booking_date: date) -> bool:
+    """Проверить, свободна ли площадка на дату среди активных (не отменённых) бронирований."""
+    for booking in bookings:
+        if booking.is_cancelled:
+            continue
+        if booking.venue.id == venue.id and booking.festival.date == booking_date:
+            return False
+    return True
+
+
+def check_venue_suitability(
+    venue: Venue, festival: Festival, bookings: list[Booking]
+) -> str:
+    """Вернуть текстовый статус площадки для фестиваля.
+
+    Функция из ПР1: порядок проверок и тексты сообщений сохранены, но
+    доступность теперь определяется по состоянию объектов Booking
+    (отменённые бронирования площадку не блокируют), а вместимость —
+    методом объекта Venue.
+    """
+    if not is_venue_available(bookings, venue, festival.date):
         return "Площадка недоступна на выбранную дату"
-    elif attendees > capacity:
+    elif not venue.is_suitable_for(festival.expected_attendees):
         return "Площадка не подходит: вместимость превышена"
     else:
         return "Площадка подходит для проведения фестиваля"
 
 
-def is_venue_available(
-    bookings: list[dict], festivals: dict[int, dict], venue_id: int, booking_date: date
-) -> bool:
-    """Проверить, свободна ли площадка на дату (дата берётся из фестиваля бронирования)."""
-    for booking in bookings:
-        booked_festival = festivals[booking["festival_id"]]
-        is_same_date = booked_festival["date"] == booking_date.isoformat()
-        if booking["venue_id"] == venue_id and is_same_date:
-            return False
-    return True
+def create_booking(bookings: list[Booking], festival: Festival, venue: Venue) -> Optional[Booking]:
+    """Создать бронирование, связав фестиваль с площадкой.
 
-
-def create_booking(
-    bookings: list[dict],
-    festivals: dict[int, dict],
-    venues: dict[int, dict],
-    festival_id: int,
-    venue_id: int,
-) -> dict:
-    """Привязать фестиваль к площадке (создать запись расписания).
-
-    Вызывает ValueError, если площадка не подходит по вместимости
-    или уже занята другим фестивалем на ту же дату.
+    Возвращает None, если площадка не подходит по вместимости или уже
+    занята другим активным бронированием на дату фестиваля.
     """
-    festival = get_festival(festivals, festival_id)
-    venue = get_venue(venues, venue_id)
-    booking_date = date.fromisoformat(festival["date"])
+    if not venue.is_suitable_for(festival.expected_attendees):
+        return None
+    if not is_venue_available(bookings, venue, festival.date):
+        return None
 
-    if not is_venue_available(bookings, festivals, venue_id, booking_date):
-        raise ValueError("Площадка уже занята другим фестивалем на эту дату")
-    if festival["expected_attendees"] > venue["capacity"]:
-        raise ValueError("Ожидаемое число посетителей превышает вместимость площадки")
-
-    booking_id = max((booking["id"] for booking in bookings), default=0) + 1
-    booking = {"id": booking_id, "festival_id": festival_id, "venue_id": venue_id}
+    booking_id = max((booking.id for booking in bookings), default=0) + 1
+    booking = Booking(booking_id, festival, venue)
     bookings.append(booking)
     return booking
 
 
-def cancel_booking(bookings: list[dict], booking_id: int) -> bool:
-    """Отменить запись расписания по идентификатору.
+def cancel_booking(bookings: list[Booking], booking_id: int) -> bool:
+    """Отменить бронирование по идентификатору, вызвав его метод cancel().
 
-    Возвращает True, если запись была найдена и удалена.
+    Возвращает True, если бронирование было найдено.
     """
-    for index, booking in enumerate(bookings):
-        if booking["id"] == booking_id:
-            del bookings[index]
+    for booking in bookings:
+        if booking.id == booking_id:
+            booking.cancel()
             return True
     return False
+
+
+def show_bookings(bookings: list[Booking]) -> None:
+    """Вывести информацию об объектах Booking."""
+    if not bookings:
+        print("Расписание пусто.")
+        return
+    for booking in bookings:
+        print(f"{booking.id}. {booking}")
