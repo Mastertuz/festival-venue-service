@@ -3,6 +3,28 @@
 from collections.abc import Iterator
 
 
+class Organizer:
+    """Организатор фестиваля — ответственное лицо или организация."""
+
+    def __init__(self, organizer_id: int, name: str) -> None:
+        """Создать объект организатора."""
+        self.id = organizer_id
+        self.name = name
+
+    def __str__(self) -> str:
+        """Вернуть удобное строковое представление организатора."""
+        return self.name
+
+    @classmethod
+    def from_data(cls, data: dict) -> "Organizer":
+        """Создать организатора из словаря данных (например, загруженного из JSON)."""
+        return cls(data["id"], data["name"])
+
+    def to_data(self) -> dict:
+        """Представить организатора в виде словаря для сохранения в JSON."""
+        return {"id": self.id, "name": self.name}
+
+
 def add_organizer(organizers: dict[int, dict], name: str) -> int:
     """Добавить организатора в словарь organizers и вернуть его идентификатор."""
     organizer_id = max(organizers.keys(), default=0) + 1

@@ -1,6 +1,6 @@
 import pytest
 
-from models.organizers import add_organizer, find_organizer, get_organizer
+from models.organizers import Organizer, add_organizer, find_organizer, get_organizer
 
 
 def test_add_organizer():
@@ -27,3 +27,20 @@ def test_get_organizer_missing_raises_error():
     organizers = {}
     with pytest.raises(KeyError):
         get_organizer(organizers, 99)
+
+
+def test_organizer_creation():
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    assert organizer.id == 1
+    assert organizer.name == "АНО «Арт-Ивент»"
+
+
+def test_organizer_str():
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    assert str(organizer) == "АНО «Арт-Ивент»"
+
+
+def test_organizer_from_data_and_to_data_roundtrip():
+    data = {"id": 1, "name": "АНО «Арт-Ивент»"}
+    organizer = Organizer.from_data(data)
+    assert organizer.to_data() == data
