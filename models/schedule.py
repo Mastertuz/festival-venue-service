@@ -2,8 +2,53 @@
 
 from datetime import date
 
-from models.festivals import get_festival
-from models.venues import get_venue
+from models.festivals import Festival, get_festival
+from models.venues import Venue, get_venue
+
+
+class Booking:
+    """Бронирование площадки под фестиваль (запись расписания).
+
+    Композиция: Booking связывает объекты Festival и Venue, но не является
+    их разновидностью — отношение "является" (наследование) здесь неуместно.
+    """
+
+    def __init__(self, booking_id: int, festival: Festival, venue: Venue) -> None:
+        """Создать бронирование, связав фестиваль с площадкой."""
+        self.id = booking_id
+        self.festival = festival
+        self.venue = venue
+        self.is_cancelled = False
+
+    def cancel(self) -> None:
+        """Отменить бронирование, не удаляя его из коллекции."""
+        self.is_cancelled = True
+
+    @property
+    def booking_date(self) -> date:
+        """Дата бронирования — дата проведения связанного фестиваля."""
+        return self.festival.date
+
+    @property
+    def status(self) -> str:
+        """Текстовый статус бронирования (доступен как атрибут, без вызова)."""
+        return "отменено" if self.is_cancelled else "активно"
+
+    def __str__(self) -> str:
+        """Вернуть удобное строковое представление бронирования."""
+        return (
+            f"{self.festival.name} → {self.venue.name}, "
+            f"{self.booking_date.isoformat()} ({self.status})"
+        )
+
+    def to_data(self) -> dict:
+        """Представить бронирование в виде словаря для сохранения в JSON."""
+        return {
+            "id": self.id,
+            "festival_id": self.festival.id,
+            "venue_id": self.venue.id,
+            "is_cancelled": self.is_cancelled,
+        }
 
 
 def check_venue_suitability(capacity: int, attendees: int, is_available: bool) -> str:

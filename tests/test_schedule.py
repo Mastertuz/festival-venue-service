@@ -2,10 +2,10 @@ from datetime import date
 
 import pytest
 
-from models.festivals import add_festival
-from models.organizers import add_organizer
-from models.schedule import cancel_booking, create_booking, is_venue_available
-from models.venues import add_venue
+from models.festivals import Festival, add_festival
+from models.organizers import Organizer, add_organizer
+from models.schedule import Booking, cancel_booking, create_booking, is_venue_available
+from models.venues import Venue, add_venue
 
 
 def make_data():
@@ -59,3 +59,42 @@ def test_cancel_booking():
     assert cancel_booking(bookings, booking["id"])
     assert bookings == []
     assert not cancel_booking(bookings, booking["id"])
+
+
+def make_object_data() -> tuple[Festival, Venue]:
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    venue = Venue(1, "Городской парк", 5000)
+    festival = Festival(1, "Фестиваль уличной музыки", date(2026, 9, 15), 4500, organizer)
+    return festival, venue
+
+
+def test_booking_creation():
+    festival, venue = make_object_data()
+    booking = Booking(1, festival, venue)
+    assert booking.id == 1
+    assert booking.festival is festival
+    assert booking.venue is venue
+    assert not booking.is_cancelled
+
+
+def test_booking_date_comes_from_festival():
+    festival, venue = make_object_data()
+    booking = Booking(1, festival, venue)
+    assert booking.booking_date == date(2026, 9, 15)
+
+
+def test_booking_status_property():
+    festival, venue = make_object_data()
+    booking = Booking(1, festival, venue)
+    assert booking.status == "активно"
+    booking.cancel()
+    assert booking.status == "отменено"
+    assert booking.is_cancelled
+
+
+def test_booking_str_reflects_state():
+    festival, venue = make_object_data()
+    booking = Booking(1, festival, venue)
+    assert str(booking) == "Фестиваль уличной музыки → Городской парк, 2026-09-15 (активно)"
+    booking.cancel()
+    assert str(booking).endswith("(отменено)")
