@@ -3,7 +3,43 @@
 from collections.abc import Iterator
 from datetime import date
 
-from models.organizers import get_organizer
+from models.organizers import Organizer, get_organizer
+
+
+class Festival:
+    """Фестиваль — мероприятие, для которого подбирается площадка."""
+
+    def __init__(
+        self,
+        festival_id: int,
+        name: str,
+        festival_date: date,
+        expected_attendees: int,
+        organizer: Organizer,
+    ) -> None:
+        """Создать объект фестиваля, связав его с организатором."""
+        self.id = festival_id
+        self.name = name
+        self.date = festival_date
+        self.expected_attendees = expected_attendees
+        self.organizer = organizer
+
+    def __str__(self) -> str:
+        """Вернуть удобное строковое представление фестиваля."""
+        return (
+            f"{self.name} — {self.date.isoformat()}, "
+            f"{self.expected_attendees} посетителей (организатор: {self.organizer})"
+        )
+
+    def to_data(self) -> dict:
+        """Представить фестиваль в виде словаря для сохранения в JSON."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "date": self.date.isoformat(),
+            "expected_attendees": self.expected_attendees,
+            "organizer_id": self.organizer.id,
+        }
 
 
 def add_festival(

@@ -3,12 +3,13 @@ from datetime import date
 import pytest
 
 from models.festivals import (
+    Festival,
     add_festival,
     filter_festivals_by_min_attendees,
     find_festival,
     sort_festivals_by_date,
 )
-from models.organizers import add_organizer
+from models.organizers import Organizer, add_organizer
 
 
 def make_organizers():
@@ -57,3 +58,18 @@ def test_sort_festivals_by_date():
     add_festival(festivals, organizers, "Камерный концерт", date(2026, 5, 1), 100, 1)
     result = sort_festivals_by_date(festivals)
     assert [f["name"] for f in result] == ["Камерный концерт", "Фестиваль уличной музыки"]
+
+
+def test_festival_creation():
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    festival = Festival(1, "Фестиваль уличной музыки", date(2026, 6, 12), 4500, organizer)
+    assert festival.id == 1
+    assert festival.date == date(2026, 6, 12)
+    assert festival.organizer is organizer
+
+
+def test_festival_str_includes_organizer():
+    organizer = Organizer(1, "АНО «Арт-Ивент»")
+    festival = Festival(1, "Фестиваль уличной музыки", date(2026, 6, 12), 4500, organizer)
+    assert "Фестиваль уличной музыки" in str(festival)
+    assert "АНО «Арт-Ивент»" in str(festival)
