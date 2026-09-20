@@ -1,10 +1,7 @@
 [
   {
     "id": 1,
-    "venue_id": 1,
-    "festival_name": "Фестиваль уличной музыки",
-    "organizer_name": "АНО «Арт-Ивент»",
-    "expected_attendees": 4500,
-    "booking_date": "2026-06-12"
+    "festival_id": 1,
+    "venue_id": 1
   }
 ]
