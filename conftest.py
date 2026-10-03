@@ -32,7 +32,10 @@ def web_data(tmp_path, monkeypatch):
                 "organizer_id": 1,
             }
         ],
-        "bookings": [{"id": 1, "festival_id": 1, "venue_id": 1, "is_cancelled": False}],
+        "bookings": [
+            {"id": 1, "festival_id": 1, "venue_id": 1, "is_cancelled": False},
+            {"id": 2, "festival_id": 1, "venue_id": 2, "is_cancelled": True},
+        ],
     }
     data_dir = tmp_path / "data"
     data_dir.mkdir()

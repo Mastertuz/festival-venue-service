@@ -52,6 +52,18 @@ class Booking:
         }
 
 
+def find_booking_by_id(bookings: list[Booking], booking_id: int) -> Optional[Booking]:
+    """Найти бронирование по идентификатору; вернуть None, если его нет.
+
+    Используется веб-страницей бронирования, которая в этом случае
+    отвечает кодом 404.
+    """
+    for booking in bookings:
+        if booking.id == booking_id:
+            return booking
+    return None
+
+
 def is_venue_available(bookings: list[Booking], venue: Venue, booking_date: date) -> bool:
     """Проверить, свободна ли площадка на дату среди активных (не отменённых) бронирований."""
     for booking in bookings:

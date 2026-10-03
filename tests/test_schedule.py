@@ -7,6 +7,7 @@ from models.schedule import (
     cancel_booking,
     check_venue_suitability,
     create_booking,
+    find_booking_by_id,
     is_venue_available,
     show_bookings,
 )
@@ -144,3 +145,14 @@ def test_show_bookings(capsys):
     create_booking(bookings, festival, venue)
     show_bookings(bookings)
     assert "Фестиваль уличной музыки → Городской парк" in capsys.readouterr().out
+
+
+def test_find_booking_by_id_returns_booking():
+    festival, venue = make_data()
+    bookings = [Booking(1, festival, venue), Booking(2, festival, venue)]
+    assert find_booking_by_id(bookings, 2) is bookings[1]
+
+
+def test_find_booking_by_id_returns_none_for_unknown_id():
+    festival, venue = make_data()
+    assert find_booking_by_id([Booking(1, festival, venue)], 99) is None
