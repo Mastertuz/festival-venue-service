@@ -6,6 +6,7 @@ from models.venues import (
     check_venue_capacity,
     filter_venues_by_capacity,
     find_venue,
+    find_venue_by_id,
     get_venue,
     show_venues,
     sort_venues,
@@ -104,3 +105,12 @@ def test_show_venues(capsys):
     add_venue(venues, "Городской парк", 5000)
     show_venues(venues)
     assert "1. Городской парк (вместимость 5000 чел.)" in capsys.readouterr().out
+
+
+def test_find_venue_by_id_returns_venue():
+    venues = [Venue(1, "Городской парк", 5000), Venue(2, "Арена", 2000)]
+    assert find_venue_by_id(venues, 2) is venues[1]
+
+
+def test_find_venue_by_id_returns_none_for_unknown_id():
+    assert find_venue_by_id([Venue(1, "Городской парк", 5000)], 99) is None

@@ -1,5 +1,7 @@
 """Класс Venue (площадка) и функции для работы с коллекцией площадок."""
 
+from typing import Optional
+
 
 class Venue:
     """Площадка, доступная для проведения фестиваля."""
@@ -70,6 +72,18 @@ def get_venue(venues: list[Venue], venue_id: int) -> Venue:
         if venue.id == venue_id:
             return venue
     raise KeyError(f"Площадка с id={venue_id} не найдена")
+
+
+def find_venue_by_id(venues: list[Venue], venue_id: int) -> Optional[Venue]:
+    """Найти площадку по идентификатору; вернуть None, если её нет.
+
+    В отличие от get_venue() не вызывает исключение: используется
+    веб-страницей площадки, которая в этом случае отвечает кодом 404.
+    """
+    for venue in venues:
+        if venue.id == venue_id:
+            return venue
+    return None
 
 
 def check_venue_capacity(venues: list[Venue], venue_id: int, expected_attendees: int) -> bool:
