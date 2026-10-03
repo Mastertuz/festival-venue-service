@@ -170,7 +170,12 @@ def main() -> None:
             organizer_id = input_int("Идентификатор организатора: ")
             try:
                 festival = add_festival(
-                    festivals, organizers, name, festival_date, attendees, organizer_id,
+                    festivals,
+                    organizers,
+                    name,
+                    festival_date,
+                    attendees,
+                    organizer_id,
                 )
                 print(f"Фестиваль добавлен, id={festival.id}")
             except KeyError as error:

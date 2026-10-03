@@ -54,10 +54,18 @@ def test_save_and_load_organizers_roundtrip(tmp_path):
 
 def test_load_festivals_links_organizer_object(tmp_path):
     organizers = [Organizer(1, "АНО «Арт-Ивент»")]
-    filename = write_json(tmp_path / "festivals.json", [{
-        "id": 1, "name": "Фестиваль", "date": "2026-06-12",
-        "expected_attendees": 4500, "organizer_id": 1,
-    }])
+    filename = write_json(
+        tmp_path / "festivals.json",
+        [
+            {
+                "id": 1,
+                "name": "Фестиваль",
+                "date": "2026-06-12",
+                "expected_attendees": 4500,
+                "organizer_id": 1,
+            }
+        ],
+    )
     festivals = load_festivals(filename, organizers)
     assert festivals[0].organizer is organizers[0]
     assert festivals[0].date == date(2026, 6, 12)
@@ -68,25 +76,41 @@ def test_save_festivals_stores_organizer_id_and_iso_date(tmp_path):
     filename = str(tmp_path / "festivals.json")
     save_festivals(filename, festivals)
     data = json.loads(Path(filename).read_text(encoding="utf-8"))
-    assert data == [{
-        "id": 1, "name": "Фестиваль уличной музыки", "date": "2026-06-12",
-        "expected_attendees": 4500, "organizer_id": 1,
-    }]
+    assert data == [
+        {
+            "id": 1,
+            "name": "Фестиваль уличной музыки",
+            "date": "2026-06-12",
+            "expected_attendees": 4500,
+            "organizer_id": 1,
+        }
+    ]
 
 
 def test_load_festivals_skips_unknown_organizer(tmp_path):
-    filename = write_json(tmp_path / "festivals.json", [{
-        "id": 1, "name": "Фестиваль", "date": "2026-06-12",
-        "expected_attendees": 100, "organizer_id": 99,
-    }])
+    filename = write_json(
+        tmp_path / "festivals.json",
+        [
+            {
+                "id": 1,
+                "name": "Фестиваль",
+                "date": "2026-06-12",
+                "expected_attendees": 100,
+                "organizer_id": 99,
+            }
+        ],
+    )
     assert load_festivals(filename, []) == []
 
 
 def test_load_bookings_restores_links_and_state(tmp_path):
     venues, _, festivals = make_objects()
-    filename = write_json(tmp_path / "bookings.json", [
-        {"id": 1, "festival_id": 1, "venue_id": 1, "is_cancelled": True},
-    ])
+    filename = write_json(
+        tmp_path / "bookings.json",
+        [
+            {"id": 1, "festival_id": 1, "venue_id": 1, "is_cancelled": True},
+        ],
+    )
     bookings = load_bookings(filename, festivals, venues)
     assert bookings[0].festival is festivals[0]
     assert bookings[0].venue is venues[0]
@@ -116,10 +140,13 @@ def test_bookings_roundtrip_keeps_cancelled_state(tmp_path):
 
 def test_load_bookings_skips_unknown_festival_or_venue(tmp_path):
     venues, _, festivals = make_objects()
-    filename = write_json(tmp_path / "bookings.json", [
-        {"id": 1, "festival_id": 99, "venue_id": 1, "is_cancelled": False},
-        {"id": 2, "festival_id": 1, "venue_id": 99, "is_cancelled": False},
-    ])
+    filename = write_json(
+        tmp_path / "bookings.json",
+        [
+            {"id": 1, "festival_id": 99, "venue_id": 1, "is_cancelled": False},
+            {"id": 2, "festival_id": 1, "venue_id": 99, "is_cancelled": False},
+        ],
+    )
     assert load_bookings(filename, festivals, venues) == []
 
 

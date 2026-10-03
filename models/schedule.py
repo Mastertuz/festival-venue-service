@@ -62,9 +62,7 @@ def is_venue_available(bookings: list[Booking], venue: Venue, booking_date: date
     return True
 
 
-def check_venue_suitability(
-    venue: Venue, festival: Festival, bookings: list[Booking]
-) -> str:
+def check_venue_suitability(venue: Venue, festival: Festival, bookings: list[Booking]) -> str:
     """Вернуть текстовый статус площадки для фестиваля.
 
     Функция из ПР1: порядок проверок и тексты сообщений сохранены, но

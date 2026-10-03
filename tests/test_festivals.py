@@ -39,7 +39,12 @@ def test_add_festival():
     organizers = make_organizers()
     festivals: list[Festival] = []
     festival = add_festival(
-        festivals, organizers, "Фестиваль уличной музыки", date(2026, 6, 12), 4500, 1,
+        festivals,
+        organizers,
+        "Фестиваль уличной музыки",
+        date(2026, 6, 12),
+        4500,
+        1,
     )
     assert festival.id == 1
     assert festival.organizer.id == 1

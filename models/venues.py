@@ -72,9 +72,7 @@ def get_venue(venues: list[Venue], venue_id: int) -> Venue:
     raise KeyError(f"Площадка с id={venue_id} не найдена")
 
 
-def check_venue_capacity(
-    venues: list[Venue], venue_id: int, expected_attendees: int
-) -> bool:
+def check_venue_capacity(venues: list[Venue], venue_id: int, expected_attendees: int) -> bool:
     """Найти площадку по идентификатору и проверить её вместимость методом объекта.
 
     Вызывает KeyError, если площадка с таким id не найдена.
