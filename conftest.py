@@ -45,3 +45,13 @@ def web_data(tmp_path, monkeypatch):
         )
     monkeypatch.chdir(tmp_path)
     return tmp_path
+
+
+@pytest.fixture
+def squash():
+    """Вернуть функцию, сжимающую пробельные символы в HTML-ответе до одного пробела."""
+
+    def _squash(response) -> str:
+        return " ".join(response.content.decode().split())
+
+    return _squash

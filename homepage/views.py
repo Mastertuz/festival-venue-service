@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils.html import escape
 
@@ -29,13 +29,4 @@ def page(title, content):
 
 
 def index(request):
-    venues_url = reverse("venues:list")
-    bookings_url = reverse("bookings:list")
-    content = f"""
-    <h1 class="display-4">Festival Venue Service</h1>
-    <p class="lead">Сервис управления фестивальными площадками.</p>
-    <p>Основные разделы:</p>
-    <a href="{venues_url}" class="btn btn-primary me-2">Площадки</a>
-    <a href="{bookings_url}" class="btn btn-secondary">Бронирования</a>
-    """
-    return HttpResponse(page("Festival Venue Service", content))
+    return render(request, "homepage/index.html")
