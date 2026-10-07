@@ -1,0 +1,38 @@
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+.fvs-logo {
+    height: 40px;
+    width: auto;
+    margin: 0.75rem 0;
+}
+
+.venue-card {
+    padding: 0.25rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.venue-card:hover {
+    box-shadow: 0 0.25rem 0.75rem rgba(31, 58, 95, 0.15);
+}
+
+.booking-status {
+    font-weight: 600;
+}
+
+.booking-status-cancelled {
+    text-decoration: line-through;
+}
+
+.site-footer {
+    color: #6c757d;
+    border-top: 1px solid #ddd;
+}
