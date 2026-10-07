@@ -6,9 +6,9 @@ from django.utils.html import escape
 def page(title, content):
     """Собрать HTML-страницу: кодировка, заголовок, Bootstrap и навигация."""
     bootstrap = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3" "/dist/css/bootstrap.min.css"
-    home_url = reverse("index")
-    venues_url = reverse("venues")
-    bookings_url = reverse("bookings")
+    home_url = reverse("homepage:index")
+    venues_url = reverse("venues:list")
+    bookings_url = reverse("bookings:list")
     return f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -29,8 +29,8 @@ def page(title, content):
 
 
 def index(request):
-    venues_url = reverse("venues")
-    bookings_url = reverse("bookings")
+    venues_url = reverse("venues:list")
+    bookings_url = reverse("bookings:list")
     content = f"""
     <h1 class="display-4">Festival Venue Service</h1>
     <p class="lead">Сервис управления фестивальными площадками.</p>

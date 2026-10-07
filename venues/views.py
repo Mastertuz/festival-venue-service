@@ -18,7 +18,7 @@ from storage import (
 def venues(request):
     items = ""
     for venue in load_venues("data/venues.json"):
-        url = reverse("venue_detail", args=[venue.id])
+        url = reverse("venues:detail", args=[venue.id])
         text = f"{escape(venue.name)} — вместимость {venue.capacity} мест"
         items += f'<li class="list-group-item"><a href="{url}">{text}</a></li>'
     content = f"""
@@ -31,7 +31,7 @@ def venues(request):
 def venue_detail(request, venue_id):
     venues_list = load_venues("data/venues.json")
     venue = find_venue_by_id(venues_list, venue_id)
-    venues_url = reverse("venues")
+    venues_url = reverse("venues:list")
 
     if venue is None:
         content = f"""

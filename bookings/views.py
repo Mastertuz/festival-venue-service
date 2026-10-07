@@ -27,7 +27,7 @@ def badge_class(booking):
 def bookings(request):
     items = ""
     for booking in load_all_bookings():
-        url = reverse("booking_detail", args=[booking.id])
+        url = reverse("bookings:detail", args=[booking.id])
         title = (
             f"{escape(booking.festival.name)} → {escape(booking.venue.name)}, "
             f"{booking.booking_date.isoformat()}"
@@ -49,7 +49,7 @@ def bookings(request):
 
 def booking_detail(request, booking_id):
     booking = find_booking_by_id(load_all_bookings(), booking_id)
-    bookings_url = reverse("bookings")
+    bookings_url = reverse("bookings:list")
 
     if booking is None:
         content = f"""
@@ -60,7 +60,7 @@ def booking_detail(request, booking_id):
         """
         return HttpResponse(page("Бронирование не найдено", content), status=404)
 
-    venue_url = reverse("venue_detail", args=[booking.venue.id])
+    venue_url = reverse("venues:detail", args=[booking.venue.id])
     content = f"""
     <div class="card">
         <div class="card-body">
