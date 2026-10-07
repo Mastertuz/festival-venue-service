@@ -1,4 +1,7 @@
+from django.template.loader import render_to_string
 from django.test import Client
+
+from models.venues import Venue
 
 
 def template_names(response):
@@ -67,3 +70,14 @@ def test_venue_detail_unknown_id_returns_404(web_data):
 def test_venue_detail_without_data_files_returns_404(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert Client().get("/venues/1/").status_code == 404
+
+
+def test_venues_list_shows_count_with_length_filter(web_data, squash):
+    html = squash(Client().get("/venues/"))
+    assert "Всего площадок: 2" in html
+
+
+def test_venue_card_uses_default_filter_for_empty_name():
+    html = render_to_string("venues/includes/venue_card.html", {"venue": Venue(7, "", 100)})
+    assert "Без названия" in html
+    assert "Вместимость: 100 мест" in html

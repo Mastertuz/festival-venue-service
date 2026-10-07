@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.test import Client
 
 
@@ -72,3 +74,14 @@ def test_booking_detail_unknown_id_returns_404(web_data):
 def test_booking_detail_without_data_files_returns_404(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert Client().get("/bookings/1/").status_code == 404
+
+
+def test_bookings_list_shows_count_with_length_filter(web_data, squash):
+    html = squash(Client().get("/bookings/"))
+    assert "Всего бронирований: 2" in html
+
+
+def test_booking_dates_are_formatted_with_date_filter(web_data, squash):
+    expected = date.today().strftime("%d.%m.%Y")
+    assert expected in squash(Client().get("/bookings/"))
+    assert f"<strong>Дата:</strong> {expected}" in squash(Client().get("/bookings/1/"))
