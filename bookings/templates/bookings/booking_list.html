@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Бронирования – Festival Venue Service{% endblock %}
+
+{% block content %}
+    <h1>Бронирования</h1>
+
+    <ul class="list-group">
+        {% for booking in bookings %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="{% url 'bookings:detail' booking.id %}">
+                    Бронирование №{{ booking.id }}:
+                    {{ booking.festival.name }} → {{ booking.venue.name }},
+                    {{ booking.booking_date }}
+                </a>
+                {% include "bookings/includes/booking_status.html" %}
+            </li>
+        {% empty %}
+            <li class="list-group-item">
+                Бронирования не найдены.
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}
