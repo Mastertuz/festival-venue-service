@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if venue %}{{ venue.name }}{% else %}Площадка не найдена{% endif %} – Festival Venue Service
+{% endblock %}
+
+{% block content %}
+    {% if venue %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">
+                    {{ venue.name }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>ID:</strong> {{ venue.id }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Вместимость:</strong>
+                    {{ venue.capacity }} мест
+                </p>
+
+                <p class="card-text">
+                    Доступность на текущую дату:
+                    {% if available %}
+                        <span class="badge bg-success">свободна</span>
+                    {% else %}
+                        <span class="badge bg-danger">занята</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">
+            Площадка не найдена
+        </h1>
+        <p>
+            Площадка с указанным идентификатором отсутствует.
+        </p>
+    {% endif %}
+
+    <a
+        href="{% url 'venues:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        ← к списку площадок
+    </a>
+{% endblock %}

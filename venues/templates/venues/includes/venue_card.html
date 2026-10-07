@@ -1,0 +1,18 @@
+<article class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h4">
+            {{ venue.name }}
+        </h2>
+
+        <p class="card-text">
+            Вместимость: {{ venue.capacity }} мест
+        </p>
+
+        <a
+            href="{% url 'venues:detail' venue.id %}"
+            class="btn btn-primary"
+        >
+            Подробнее
+        </a>
+    </div>
+</article>
