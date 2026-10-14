@@ -62,6 +62,63 @@ BOOKING_BY_ID_SQL = """
     WHERE bookings.id = ?;
 """
 
+ACTIVE_BOOKINGS_COUNT_SQL = """
+    SELECT
+        COUNT(*) AS bookings_count
+    FROM bookings
+    WHERE is_cancelled = 0;
+"""
+
+VENUES_SUMMARY_SQL = """
+    SELECT
+        COUNT(*) AS venues_count,
+        MIN(capacity) AS min_capacity,
+        MAX(capacity) AS max_capacity,
+        ROUND(AVG(capacity), 1) AS avg_capacity,
+        SUM(capacity) AS total_capacity
+    FROM venues;
+"""
+
+BOOKINGS_BY_VENUE_SQL = """
+    SELECT
+        venues.name AS venue_name,
+        COUNT(bookings.id) AS bookings_count
+    FROM venues
+    LEFT JOIN bookings
+        ON venues.id = bookings.venue_id
+       AND bookings.is_cancelled = 0
+    GROUP BY venues.id, venues.name
+    ORDER BY bookings_count DESC, venues.name;
+"""
+
+FESTIVALS_BY_ORGANIZER_SQL = """
+    SELECT
+        organizers.name AS organizer_name,
+        COUNT(festivals.id) AS festivals_count,
+        SUM(festivals.expected_attendees) AS total_attendees
+    FROM organizers
+    JOIN festivals
+        ON festivals.organizer_id = organizers.id
+    GROUP BY organizers.id, organizers.name
+    ORDER BY total_attendees DESC;
+"""
+
+POPULAR_VENUES_SQL = """
+    SELECT
+        venues.name AS venue_name,
+        COUNT(bookings.id) AS bookings_count
+    FROM venues
+    JOIN bookings
+        ON venues.id = bookings.venue_id
+    WHERE bookings.is_cancelled = 0
+    GROUP BY venues.id, venues.name
+    HAVING COUNT(bookings.id) > ?
+    ORDER BY bookings_count DESC;
+"""
+
+# Площадка считается «часто бронируемой», если у неё больше стольких активных бронирований.
+POPULAR_THRESHOLD = 2
+
 
 def bookings(request):
     only_active = request.GET.get("active") == "1"
@@ -96,4 +153,24 @@ def booking_detail(request, booking_id):
         "bookings/booking_detail.html",
         context,
         status=404 if booking is None else 200,
+    )
+
+
+def statistics(request):
+    with closing(get_connection()) as conn:
+        context = {
+            "active_bookings_count": conn.execute(ACTIVE_BOOKINGS_COUNT_SQL).fetchone()[
+                "bookings_count"
+            ],
+            "summary": conn.execute(VENUES_SUMMARY_SQL).fetchone(),
+            "by_venue": conn.execute(BOOKINGS_BY_VENUE_SQL).fetchall(),
+            "by_organizer": conn.execute(FESTIVALS_BY_ORGANIZER_SQL).fetchall(),
+            "popular": conn.execute(POPULAR_VENUES_SQL, [POPULAR_THRESHOLD]).fetchall(),
+            "popular_threshold": POPULAR_THRESHOLD,
+        }
+
+    return render(
+        request,
+        "bookings/statistics.html",
+        context,
     )

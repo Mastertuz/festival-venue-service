@@ -42,7 +42,15 @@ def test_base_template_links_static_files(web_data, squash):
 
 
 def test_all_pages_inherit_static_files_from_base_template(web_data):
-    for url in ("/", "/venues/", "/venues/1/", "/bookings/", "/bookings/1/"):
+    for url in (
+        "/",
+        "/venues/",
+        "/venues/1/",
+        "/venues/available/",
+        "/bookings/",
+        "/bookings/1/",
+        "/bookings/statistics/",
+    ):
         html = Client().get(url).content.decode()
         assert "/static/homepage/css/style.css" in html, url
         assert "/static/homepage/js/main.js" in html, url

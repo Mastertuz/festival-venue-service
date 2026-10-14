@@ -28,6 +28,10 @@
     {% endif %}
 
     <p>
+        <a href="{% url 'venues:available' %}">Найти свободную площадку</a>
+    </p>
+
+    <p>
         Всего площадок: {{ venues|length }}
     </p>
 

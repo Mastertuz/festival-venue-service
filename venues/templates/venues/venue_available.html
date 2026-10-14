@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Свободные площадки – Festival Venue Service{% endblock %}
+
+{% block content %}
+    <h1>Свободные площадки</h1>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+            <label for="date" class="form-label">Дата фестиваля</label>
+            <input
+                type="date"
+                class="form-control"
+                id="date"
+                name="date"
+                value="{{ raw_date }}"
+                required
+            >
+        </div>
+        <div class="col-auto">
+            <label for="attendees" class="form-label">Ожидаемое число посетителей</label>
+            <input
+                type="number"
+                min="0"
+                class="form-control"
+                id="attendees"
+                name="attendees"
+                value="{{ attendees }}"
+            >
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Найти</button>
+        </div>
+    </form>
+
+    {% if date_error %}
+        <p class="text-danger">Укажите дату в формате ГГГГ-ММ-ДД.</p>
+    {% endif %}
+    {% if attendees_error %}
+        <p class="text-danger">Число посетителей должно быть целым неотрицательным числом.</p>
+    {% endif %}
+
+    {% if searched %}
+        <h2 class="h4">
+            Дата: {{ search_date|date:"d.m.Y" }}{% if attendees %}, посетителей: {{ attendees }}{% endif %}
+        </h2>
+
+        {% for venue in venues %}
+            {% include "venues/includes/venue_card.html" %}
+        {% empty %}
+            <p>На выбранную дату свободных площадок нет.</p>
+        {% endfor %}
+    {% endif %}
+
+    <a href="{% url 'venues:list' %}" class="btn btn-outline-secondary mt-3">
+        ← ко всем площадкам
+    </a>
+{% endblock %}

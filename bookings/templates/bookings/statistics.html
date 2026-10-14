@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика – Festival Venue Service{% endblock %}
+
+{% block content %}
+    <h1>Статистика бронирований</h1>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Активных бронирований</div>
+                <div class="fs-3">{{ active_bookings_count }}</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Площадок</div>
+                <div class="fs-3">{{ summary.venues_count }}</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Вместимость (мин. – макс.)</div>
+                <div class="fs-3">
+                    {{ summary.min_capacity|default_if_none:"—" }} – {{ summary.max_capacity|default_if_none:"—" }}
+                </div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Средняя вместимость</div>
+                <div class="fs-3">{{ summary.avg_capacity|default_if_none:"—" }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <h2 class="h4">Бронирования по площадкам</h2>
+    <table class="table">
+        <thead>
+            <tr><th>Площадка</th><th>Активных бронирований</th></tr>
+        </thead>
+        <tbody>
+            {% for item in by_venue %}
+                <tr>
+                    <td>{{ item.venue_name }}</td>
+                    <td>{{ item.bookings_count }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="2">Данные отсутствуют.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h4">Фестивали по организаторам</h2>
+    <table class="table">
+        <thead>
+            <tr><th>Организатор</th><th>Фестивалей</th><th>Ожидаемых посетителей</th></tr>
+        </thead>
+        <tbody>
+            {% for item in by_organizer %}
+                <tr>
+                    <td>{{ item.organizer_name }}</td>
+                    <td>{{ item.festivals_count }}</td>
+                    <td>{{ item.total_attendees }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="3">Данные отсутствуют.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h4">Часто бронируемые площадки (более {{ popular_threshold }} бронирований)</h2>
+    <ul class="list-group">
+        {% for item in popular %}
+            <li class="list-group-item d-flex justify-content-between">
+                <span>{{ item.venue_name }}</span>
+                <span>{{ item.bookings_count }}</span>
+            </li>
+        {% empty %}
+            <li class="list-group-item">Таких площадок нет.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}
