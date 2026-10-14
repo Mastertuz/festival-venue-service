@@ -8,6 +8,8 @@ import django
 import pytest
 from django.test.utils import setup_test_environment
 
+import db.database
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "venue_service.settings")
 django.setup()
 setup_test_environment()
@@ -55,3 +57,11 @@ def squash():
         return " ".join(response.content.decode().split())
 
     return _squash
+
+
+@pytest.fixture
+def db_path(tmp_path, monkeypatch):
+    """Путь к временной базе SQLite: подменяет db.database.DB_PATH на время теста."""
+    path = tmp_path / "test.sqlite"
+    monkeypatch.setattr(db.database, "DB_PATH", path)
+    return path
