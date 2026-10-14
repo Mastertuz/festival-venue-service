@@ -4,5 +4,47 @@
     "festival_id": 1,
     "venue_id": 1,
     "is_cancelled": false
+  },
+  {
+    "id": 2,
+    "festival_id": 2,
+    "venue_id": 2,
+    "is_cancelled": false
+  },
+  {
+    "id": 3,
+    "festival_id": 3,
+    "venue_id": 1,
+    "is_cancelled": false
+  },
+  {
+    "id": 4,
+    "festival_id": 4,
+    "venue_id": 3,
+    "is_cancelled": false
+  },
+  {
+    "id": 5,
+    "festival_id": 5,
+    "venue_id": 2,
+    "is_cancelled": false
+  },
+  {
+    "id": 6,
+    "festival_id": 6,
+    "venue_id": 1,
+    "is_cancelled": true
+  },
+  {
+    "id": 7,
+    "festival_id": 6,
+    "venue_id": 3,
+    "is_cancelled": false
+  },
+  {
+    "id": 8,
+    "festival_id": 7,
+    "venue_id": 1,
+    "is_cancelled": false
   }
 ]

@@ -5,5 +5,47 @@
     "date": "2026-06-12",
     "expected_attendees": 4500,
     "organizer_id": 1
+  },
+  {
+    "id": 2,
+    "name": "Джазовый вечер",
+    "date": "2026-11-07",
+    "expected_attendees": 1200,
+    "organizer_id": 2
+  },
+  {
+    "id": 3,
+    "name": "Кино под открытым небом",
+    "date": "2026-11-21",
+    "expected_attendees": 3000,
+    "organizer_id": 1
+  },
+  {
+    "id": 4,
+    "name": "Электронная ночь",
+    "date": "2026-12-05",
+    "expected_attendees": 6500,
+    "organizer_id": 3
+  },
+  {
+    "id": 5,
+    "name": "Книжный фестиваль",
+    "date": "2026-12-19",
+    "expected_attendees": 900,
+    "organizer_id": 2
+  },
+  {
+    "id": 6,
+    "name": "Фестиваль еды",
+    "date": "2027-01-16",
+    "expected_attendees": 4000,
+    "organizer_id": 1
+  },
+  {
+    "id": 7,
+    "name": "Фестиваль ремёсел",
+    "date": "2027-02-06",
+    "expected_attendees": 1800,
+    "organizer_id": 2
   }
 ]
