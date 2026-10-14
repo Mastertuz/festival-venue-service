@@ -1,27 +1,77 @@
+from contextlib import closing
+
 from django.shortcuts import render
 
-from models.schedule import find_booking_by_id
-from storage import (
-    load_bookings,
-    load_festivals,
-    load_organizers,
-    load_venues,
-)
+from db.database import get_connection, row_with_dates
 
+BOOKINGS_SQL = """
+    SELECT
+        bookings.id,
+        festivals.name AS festival_name,
+        festivals.date AS booking_date,
+        venues.name AS venue_name,
+        venues.capacity,
+        organizers.name AS organizer_name,
+        bookings.is_cancelled
+    FROM bookings
+    JOIN festivals
+        ON bookings.festival_id = festivals.id
+    JOIN venues
+        ON bookings.venue_id = venues.id
+    JOIN organizers
+        ON festivals.organizer_id = organizers.id
+    ORDER BY festivals.date, bookings.id;
+"""
 
-def load_all_bookings():
-    """Загрузить бронирования вместе со связанными фестивалями и площадками."""
-    venues_list = load_venues("data/venues.json")
-    organizers_list = load_organizers("data/organizers.json")
-    festivals_list = load_festivals("data/festivals.json", organizers_list)
-    return load_bookings("data/bookings.json", festivals_list, venues_list)
+ACTIVE_BOOKINGS_SQL = """
+    SELECT
+        bookings.id,
+        festivals.name AS festival_name,
+        festivals.date AS booking_date,
+        venues.name AS venue_name,
+        venues.capacity,
+        organizers.name AS organizer_name,
+        bookings.is_cancelled
+    FROM bookings
+    JOIN festivals
+        ON bookings.festival_id = festivals.id
+    JOIN venues
+        ON bookings.venue_id = venues.id
+    JOIN organizers
+        ON festivals.organizer_id = organizers.id
+    WHERE bookings.is_cancelled = 0
+    ORDER BY festivals.date, bookings.id;
+"""
+
+BOOKING_BY_ID_SQL = """
+    SELECT
+        bookings.id,
+        festivals.name AS festival_name,
+        festivals.date AS booking_date,
+        venues.id AS venue_id,
+        venues.name AS venue_name,
+        organizers.name AS organizer_name,
+        bookings.is_cancelled
+    FROM bookings
+    JOIN festivals
+        ON bookings.festival_id = festivals.id
+    JOIN venues
+        ON bookings.venue_id = venues.id
+    JOIN organizers
+        ON festivals.organizer_id = organizers.id
+    WHERE bookings.id = ?;
+"""
 
 
 def bookings(request):
-    bookings_list = load_all_bookings()
+    only_active = request.GET.get("active") == "1"
+
+    with closing(get_connection()) as conn:
+        rows = conn.execute(ACTIVE_BOOKINGS_SQL if only_active else BOOKINGS_SQL).fetchall()
 
     context = {
-        "bookings": bookings_list,
+        "bookings": [row_with_dates(row, "booking_date") for row in rows],
+        "only_active": only_active,
     }
 
     return render(
@@ -32,12 +82,10 @@ def bookings(request):
 
 
 def booking_detail(request, booking_id):
-    bookings_list = load_all_bookings()
+    with closing(get_connection()) as conn:
+        row = conn.execute(BOOKING_BY_ID_SQL, [booking_id]).fetchone()
 
-    booking = find_booking_by_id(
-        bookings_list,
-        booking_id,
-    )
+    booking = row_with_dates(row, "booking_date") if row is not None else None
 
     context = {
         "booking": booking,

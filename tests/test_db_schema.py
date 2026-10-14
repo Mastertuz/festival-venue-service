@@ -119,3 +119,13 @@ def test_missing_database_is_an_error_and_is_not_created(db_path):
 
 def test_connection_uses_module_level_db_path(db_path):
     assert db.database.DB_PATH == db_path
+
+
+def test_row_with_dates_converts_iso_strings_to_dates(conn):
+    from datetime import date
+
+    from db.database import row_with_dates
+
+    row = conn.execute("SELECT '2026-06-12' AS day, 5 AS number").fetchone()
+    converted = row_with_dates(row, "day")
+    assert converted == {"day": date(2026, 6, 12), "number": 5}

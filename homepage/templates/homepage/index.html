@@ -15,4 +15,21 @@
     <a href="{% url 'bookings:list' %}" class="btn btn-secondary">
         Бронирования
     </a>
+
+    <hr class="my-4">
+
+    <h2 class="h4">Сводка</h2>
+    <p>Активных бронирований: {{ active_bookings_count }}</p>
+
+    <h2 class="h4">Ближайшие фестивали</h2>
+    <ul class="list-group">
+        {% for festival in next_festivals %}
+            <li class="list-group-item d-flex justify-content-between">
+                <span>{{ festival.name }} — {{ festival.organizer_name }}</span>
+                <span>{{ festival.date|date:"d.m.Y" }}</span>
+            </li>
+        {% empty %}
+            <li class="list-group-item">Ближайших фестивалей нет.</li>
+        {% endfor %}
+    </ul>
 {% endblock %}

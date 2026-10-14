@@ -5,6 +5,28 @@
 {% block content %}
     <h1>Площадки</h1>
 
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+            <label for="min_capacity" class="form-label">Вместимость не менее</label>
+            <input
+                type="number"
+                min="0"
+                class="form-control"
+                id="min_capacity"
+                name="min_capacity"
+                value="{{ min_capacity }}"
+            >
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Показать</button>
+            <a href="{% url 'venues:list' %}" class="btn btn-outline-secondary">Сбросить</a>
+        </div>
+    </form>
+
+    {% if filter_error %}
+        <p class="text-danger">Вместимость должна быть целым неотрицательным числом.</p>
+    {% endif %}
+
     <p>
         Всего площадок: {{ venues|length }}
     </p>

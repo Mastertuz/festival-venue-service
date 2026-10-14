@@ -32,7 +32,7 @@ def test_main_js_sets_current_year():
     assert "getFullYear" in js
 
 
-def test_base_template_links_static_files(squash):
+def test_base_template_links_static_files(web_data, squash):
     html = squash(Client().get("/"))
     assert 'href="/static/homepage/css/style.css"' in html
     assert 'src="/static/homepage/img/logo.png"' in html

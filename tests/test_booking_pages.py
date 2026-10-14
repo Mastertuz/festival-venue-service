@@ -2,6 +2,8 @@ from datetime import date
 
 from django.test import Client
 
+from db.database import get_connection
+
 
 def template_names(response):
     return [template.name for template in response.templates]
@@ -34,8 +36,7 @@ def test_bookings_list_escapes_html_in_names(web_data):
     assert "Арена <b>" not in html
 
 
-def test_bookings_list_shows_message_when_there_are_no_bookings(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_bookings_list_shows_message_when_there_are_no_bookings(empty_db):
     html = Client().get("/bookings/").content.decode()
     assert "Бронирования не найдены." in html
 
@@ -71,8 +72,7 @@ def test_booking_detail_unknown_id_returns_404(web_data):
     assert "bookings/booking_detail.html" in template_names(response)
 
 
-def test_booking_detail_without_data_files_returns_404(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_booking_detail_in_empty_database_returns_404(empty_db):
     assert Client().get("/bookings/1/").status_code == 404
 
 
@@ -85,3 +85,28 @@ def test_booking_dates_are_formatted_with_date_filter(web_data, squash):
     expected = date.today().strftime("%d.%m.%Y")
     assert expected in squash(Client().get("/bookings/"))
     assert f"<strong>Дата:</strong> {expected}" in squash(Client().get("/bookings/1/"))
+
+
+def test_bookings_can_be_limited_to_active_ones(web_data, squash):
+    html = squash(Client().get("/bookings/?active=1"))
+    assert "Всего бронирований: 1" in html
+    assert 'href="/bookings/1/"' in html
+    assert 'href="/bookings/2/"' not in html
+    assert "Отменено" not in html
+
+
+def test_booking_list_shows_all_bookings_by_default(web_data, squash):
+    html = squash(Client().get("/bookings/"))
+    assert "Всего бронирований: 2" in html
+    assert 'href="/bookings/?active=1"' in html
+
+
+def test_bookings_are_read_from_database_not_from_json(web_data):
+    connection = get_connection()
+    try:
+        connection.execute("UPDATE bookings SET is_cancelled = 1 WHERE id = 1")
+        connection.commit()
+    finally:
+        connection.close()
+    html = Client().get("/bookings/1/").content.decode()
+    assert "Отменено" in html

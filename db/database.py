@@ -1,6 +1,7 @@
 """Подключение к базе данных SQLite индивидуального проекта."""
 
 import sqlite3
+from datetime import date
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,3 +34,12 @@ def init_schema(conn: sqlite3.Connection) -> None:
     """Выполнить sql/schema.sql: создать таблицы, которых ещё нет (IF NOT EXISTS)."""
     with open(SCHEMA_FILE, encoding="utf-8") as file:
         conn.executescript(file.read())
+
+
+def row_with_dates(row: sqlite3.Row, *date_fields: str) -> dict:
+    """Преобразовать строку результата в словарь, переведя указанные поля из строки
+    формата YYYY-MM-DD в объект date (в SQLite даты хранятся текстом)."""
+    result = dict(row)
+    for field in date_fields:
+        result[field] = date.fromisoformat(result[field])
+    return result

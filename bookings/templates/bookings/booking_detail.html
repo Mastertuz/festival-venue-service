@@ -14,18 +14,18 @@
 
                 <p class="card-text">
                     <strong>Фестиваль:</strong>
-                    {{ booking.festival.name }}
+                    {{ booking.festival_name }}
                 </p>
 
                 <p class="card-text">
                     <strong>Организатор:</strong>
-                    {{ booking.festival.organizer.name }}
+                    {{ booking.organizer_name }}
                 </p>
 
                 <p class="card-text">
                     <strong>Площадка:</strong>
-                    <a href="{% url 'venues:detail' booking.venue.id %}">
-                        {{ booking.venue.name }}
+                    <a href="{% url 'venues:detail' booking.venue_id %}">
+                        {{ booking.venue_name }}
                     </a>
                 </p>
 

@@ -6,6 +6,15 @@
     <h1>Бронирования</h1>
 
     <p>
+        Показать:
+        {% if only_active %}
+            <a href="{% url 'bookings:list' %}">все бронирования</a> · только активные
+        {% else %}
+            все бронирования · <a href="{% url 'bookings:list' %}?active=1">только активные</a>
+        {% endif %}
+    </p>
+
+    <p>
         Всего бронирований: {{ bookings|length }}
     </p>
 
@@ -14,7 +23,7 @@
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 <a href="{% url 'bookings:detail' booking.id %}">
                     Бронирование №{{ booking.id }}:
-                    {{ booking.festival.name }} → {{ booking.venue.name }},
+                    {{ booking.festival_name }} → {{ booking.venue_name }},
                     {{ booking.booking_date|date:"d.m.Y" }}
                 </a>
                 {% include "bookings/includes/booking_status.html" %}
