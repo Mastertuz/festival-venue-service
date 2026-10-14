@@ -1,6 +1,6 @@
 from datetime import date
 
-from django.shortcuts import render
+from django.shortcuts import render  # type: ignore[import-untyped]
 
 from models.schedule import is_venue_available
 from models.venues import find_venue_by_id
