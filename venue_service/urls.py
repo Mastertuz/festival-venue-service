@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings  # type: ignore[import-untyped]
 from django.contrib import admin  # type: ignore[import-untyped]
 from django.urls import include, path  # type: ignore[import-untyped]
 
@@ -24,5 +25,8 @@ urlpatterns = [
     path("venues/", include("venues.urls")),
     path("bookings/", include("bookings.urls")),
 ]
+
+if "debug_toolbar" in settings.INSTALLED_APPS:
+    urlpatterns.append(path("__debug__/", include("debug_toolbar.urls")))
 
 handler404 = "homepage.views.page_not_found"

@@ -53,6 +53,18 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Django Debug Toolbar (панель SQL-запросов) подключается только при DEBUG и если пакет установлен.
+INTERNAL_IPS = ["127.0.0.1"]
+
+try:
+    import debug_toolbar  # noqa: F401
+except ImportError:
+    pass
+else:
+    if DEBUG:
+        INSTALLED_APPS.append("debug_toolbar")
+        MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
 ROOT_URLCONF = "venue_service.urls"
 
 TEMPLATES = [
