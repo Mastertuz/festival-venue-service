@@ -1,19 +1,15 @@
-"""Настройка Django для тестов веб-слоя (pytest без pytest-django)."""
+"""Общие фикстуры тестов. Django и тестовую базу настраивает pytest-django."""
 
 import json
-import os
 from datetime import date
 
-import django
 import pytest
-from django.test.utils import setup_test_environment
 
 import db.database
 import db.import_json
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "venue_service.settings")
-django.setup()
-setup_test_environment()
+from bookings.models import Booking
+from festivals.models import Festival, Organizer
+from venues.models import Venue
 
 
 @pytest.fixture
@@ -82,3 +78,31 @@ def squash():
         return " ".join(response.content.decode().split())
 
     return _squash
+
+
+@pytest.fixture
+def orm_data(db):
+    """Тестовые данные в базе Django: две площадки, фестиваль на сегодня и два бронирования.
+
+    Бронирование 1 активно (площадка «Городской парк»), бронирование 2 отменено
+    (площадка «Арена <b>»): отменённое бронирование площадку не блокирует.
+    """
+    organizer = Organizer.objects.create(name="АНО «Арт-Ивент»")
+    park = Venue.objects.create(name="Городской парк", capacity=5000)
+    arena = Venue.objects.create(name="Арена <b>", capacity=2000)
+    festival = Festival.objects.create(
+        name="Фестиваль уличной музыки",
+        date=date.today(),
+        expected_attendees=4500,
+        organizer=organizer,
+    )
+    active = Booking.objects.create(festival=festival, venue=park)
+    cancelled = Booking.objects.create(festival=festival, venue=arena, is_cancelled=True)
+    return {
+        "organizer": organizer,
+        "park": park,
+        "arena": arena,
+        "festival": festival,
+        "active": active,
+        "cancelled": cancelled,
+    }

@@ -1,4 +1,5 @@
 pytest>=8.0
+pytest-django>=4.8
 flake8>=7.0
 black>=24.0
 Django==5.2.*
