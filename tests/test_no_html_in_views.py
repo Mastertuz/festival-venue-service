@@ -16,7 +16,7 @@ def test_views_do_not_build_html_in_python():
         source = path.read_text(encoding="utf-8")
         assert "HttpResponse" not in source, path.name
         assert "<html" not in source and "<div" not in source, path.name
-        assert "page(" not in source, path.name
+        assert not re.search(r"\bpage\(", source), path.name  # get_page() допустим
 
 
 def test_views_use_render():

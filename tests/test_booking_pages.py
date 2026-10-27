@@ -94,13 +94,13 @@ def test_bookings_can_be_limited_to_active_ones(orm_data, squash):
 def test_booking_list_shows_all_bookings_by_default(orm_data, squash):
     html = squash(Client().get("/bookings/"))
     assert "Всего бронирований: 2" in html
-    assert 'href="/bookings/?active=1"' in html
+    assert 'name="active"' in html and "checked" not in html
 
 
-def test_booking_list_uses_single_query(orm_data, django_assert_num_queries):
-    with django_assert_num_queries(1):
-        response = Client().get("/bookings/")
-        list(response.context["bookings"])
+def test_booking_list_query_count(orm_data, django_assert_num_queries):
+    """Число записей, страница бронирований, список площадок и список организаторов для формы."""
+    with django_assert_num_queries(4):
+        Client().get("/bookings/")
 
 
 def test_booking_detail_shows_related_objects(orm_data, squash):

@@ -3,39 +3,11 @@ from datetime import date
 from django.shortcuts import get_object_or_404, render
 
 from bookings.models import Booking
+from venue_service.params import parse_iso_date, parse_non_negative_int
 from venue_service.search import search_text
 from venues.models import Venue
 
-MAX_NUMBER = 1_000_000_000
 UPCOMING_BOOKINGS_LIMIT = 5
-
-
-def parse_non_negative_int(value):
-    """Разобрать целое неотрицательное число из параметра запроса.
-
-    Возвращает пару (число или None, признак ошибки): пустое значение не считается ошибкой.
-    """
-    value = (value or "").strip()
-    if not value:
-        return None, False
-    try:
-        number = int(value)
-    except ValueError:
-        return None, True
-    if not 0 <= number <= MAX_NUMBER:
-        return None, True
-    return number, False
-
-
-def parse_iso_date(value):
-    """Разобрать дату формата ГГГГ-ММ-ДД из параметра запроса: (date или None, признак ошибки)."""
-    value = (value or "").strip()
-    if not value:
-        return None, False
-    try:
-        return date.fromisoformat(value), False
-    except ValueError:
-        return None, True
 
 
 def venues(request):
