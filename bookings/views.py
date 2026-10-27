@@ -1,120 +1,9 @@
-from contextlib import closing
+from django.db.models import Avg, Count, F, Max, Min, Q, Sum
+from django.shortcuts import get_object_or_404, render
 
-from django.shortcuts import render
-
-from db.database import get_connection, row_with_dates
-
-BOOKINGS_SQL = """
-    SELECT
-        bookings.id,
-        festivals.name AS festival_name,
-        festivals.date AS booking_date,
-        venues.name AS venue_name,
-        venues.capacity,
-        organizers.name AS organizer_name,
-        bookings.is_cancelled
-    FROM bookings
-    JOIN festivals
-        ON bookings.festival_id = festivals.id
-    JOIN venues
-        ON bookings.venue_id = venues.id
-    JOIN organizers
-        ON festivals.organizer_id = organizers.id
-    ORDER BY festivals.date, bookings.id;
-"""
-
-ACTIVE_BOOKINGS_SQL = """
-    SELECT
-        bookings.id,
-        festivals.name AS festival_name,
-        festivals.date AS booking_date,
-        venues.name AS venue_name,
-        venues.capacity,
-        organizers.name AS organizer_name,
-        bookings.is_cancelled
-    FROM bookings
-    JOIN festivals
-        ON bookings.festival_id = festivals.id
-    JOIN venues
-        ON bookings.venue_id = venues.id
-    JOIN organizers
-        ON festivals.organizer_id = organizers.id
-    WHERE bookings.is_cancelled = 0
-    ORDER BY festivals.date, bookings.id;
-"""
-
-BOOKING_BY_ID_SQL = """
-    SELECT
-        bookings.id,
-        festivals.name AS festival_name,
-        festivals.date AS booking_date,
-        venues.id AS venue_id,
-        venues.name AS venue_name,
-        organizers.name AS organizer_name,
-        bookings.is_cancelled
-    FROM bookings
-    JOIN festivals
-        ON bookings.festival_id = festivals.id
-    JOIN venues
-        ON bookings.venue_id = venues.id
-    JOIN organizers
-        ON festivals.organizer_id = organizers.id
-    WHERE bookings.id = ?;
-"""
-
-ACTIVE_BOOKINGS_COUNT_SQL = """
-    SELECT
-        COUNT(*) AS bookings_count
-    FROM bookings
-    WHERE is_cancelled = 0;
-"""
-
-VENUES_SUMMARY_SQL = """
-    SELECT
-        COUNT(*) AS venues_count,
-        MIN(capacity) AS min_capacity,
-        MAX(capacity) AS max_capacity,
-        ROUND(AVG(capacity), 1) AS avg_capacity,
-        SUM(capacity) AS total_capacity
-    FROM venues;
-"""
-
-BOOKINGS_BY_VENUE_SQL = """
-    SELECT
-        venues.name AS venue_name,
-        COUNT(bookings.id) AS bookings_count
-    FROM venues
-    LEFT JOIN bookings
-        ON venues.id = bookings.venue_id
-       AND bookings.is_cancelled = 0
-    GROUP BY venues.id, venues.name
-    ORDER BY bookings_count DESC, venues.name;
-"""
-
-FESTIVALS_BY_ORGANIZER_SQL = """
-    SELECT
-        organizers.name AS organizer_name,
-        COUNT(festivals.id) AS festivals_count,
-        SUM(festivals.expected_attendees) AS total_attendees
-    FROM organizers
-    JOIN festivals
-        ON festivals.organizer_id = organizers.id
-    GROUP BY organizers.id, organizers.name
-    ORDER BY total_attendees DESC;
-"""
-
-POPULAR_VENUES_SQL = """
-    SELECT
-        venues.name AS venue_name,
-        COUNT(bookings.id) AS bookings_count
-    FROM venues
-    JOIN bookings
-        ON venues.id = bookings.venue_id
-    WHERE bookings.is_cancelled = 0
-    GROUP BY venues.id, venues.name
-    HAVING COUNT(bookings.id) > ?
-    ORDER BY bookings_count DESC;
-"""
+from bookings.models import Booking
+from festivals.models import Organizer
+from venues.models import Venue
 
 # Площадка считается «часто бронируемой», если у неё больше стольких активных бронирований.
 POPULAR_THRESHOLD = 2
@@ -123,11 +12,33 @@ POPULAR_THRESHOLD = 2
 def bookings(request):
     only_active = request.GET.get("active") == "1"
 
-    with closing(get_connection()) as conn:
-        rows = conn.execute(ACTIVE_BOOKINGS_SQL if only_active else BOOKINGS_SQL).fetchall()
+    # Все бронирования; порядок (по дате фестиваля, затем по идентификатору) задан в Meta модели.
+    bookings_data = Booking.objects.all()
+
+    # Только активные: условие по булеву полю модели.
+    if only_active:
+        bookings_data = bookings_data.filter(is_cancelled=False)
+
+    # Поля связанных моделей через F(): названия фестиваля, площадки и организатора берутся
+    # через внешние ключи без ручного JOIN; values() возвращает словари с нужными ключами.
+    bookings_data = bookings_data.annotate(
+        festival_name=F("festival__name"),
+        booking_date=F("festival__date"),
+        venue_name=F("venue__name"),
+        capacity=F("venue__capacity"),
+        organizer_name=F("festival__organizer__name"),
+    ).values(
+        "id",
+        "festival_name",
+        "booking_date",
+        "venue_name",
+        "capacity",
+        "organizer_name",
+        "is_cancelled",
+    )
 
     context = {
-        "bookings": [row_with_dates(row, "booking_date") for row in rows],
+        "bookings": bookings_data,
         "only_active": only_active,
     }
 
@@ -139,10 +50,12 @@ def bookings(request):
 
 
 def booking_detail(request, booking_id):
-    with closing(get_connection()) as conn:
-        row = conn.execute(BOOKING_BY_ID_SQL, [booking_id]).fetchone()
-
-    booking = row_with_dates(row, "booking_date") if row is not None else None
+    # Бронирование вместе с фестивалем, организатором и площадкой одним запросом
+    # (select_related); при отсутствии записи get_object_or_404() вернёт ответ 404.
+    booking = get_object_or_404(
+        Booking.objects.select_related("festival__organizer", "venue"),
+        pk=booking_id,
+    )
 
     context = {
         "booking": booking,
@@ -152,22 +65,61 @@ def booking_detail(request, booking_id):
         request,
         "bookings/booking_detail.html",
         context,
-        status=404 if booking is None else 200,
     )
 
 
 def statistics(request):
-    with closing(get_connection()) as conn:
-        context = {
-            "active_bookings_count": conn.execute(ACTIVE_BOOKINGS_COUNT_SQL).fetchone()[
-                "bookings_count"
-            ],
-            "summary": conn.execute(VENUES_SUMMARY_SQL).fetchone(),
-            "by_venue": conn.execute(BOOKINGS_BY_VENUE_SQL).fetchall(),
-            "by_organizer": conn.execute(FESTIVALS_BY_ORGANIZER_SQL).fetchall(),
-            "popular": conn.execute(POPULAR_VENUES_SQL, [POPULAR_THRESHOLD]).fetchall(),
-            "popular_threshold": POPULAR_THRESHOLD,
-        }
+    # Количество активных бронирований и сводные показатели вместимости площадок.
+    active_bookings_count = Booking.objects.filter(is_cancelled=False).count()
+    summary = Venue.objects.aggregate(
+        venues_count=Count("id"),
+        min_capacity=Min("capacity"),
+        max_capacity=Max("capacity"),
+        avg_capacity=Avg("capacity"),
+        total_capacity=Sum("capacity"),
+    )
+
+    # Активные бронирования по площадкам. Запрос строится от модели Venue, поэтому площадки без
+    # бронирований тоже попадают в результат (аналог LEFT JOIN); условие is_cancelled=False
+    # применяется внутри Count(), а не к исходному набору площадок.
+    venues_with_counts = Venue.objects.annotate(
+        bookings_count=Count("bookings", filter=Q(bookings__is_cancelled=False)),
+    )
+    by_venue = (
+        venues_with_counts.annotate(venue_name=F("name"))
+        .values("venue_name", "bookings_count")
+        .order_by("-bookings_count", "venue_name")
+    )
+
+    # Фестивали и ожидаемые посетители по организаторам (группировка annotate + Count/Sum);
+    # организаторы без фестивалей в статистику не попадают.
+    by_organizer = (
+        Organizer.objects.annotate(
+            festivals_count=Count("festivals"),
+            total_attendees=Sum("festivals__expected_attendees"),
+            organizer_name=F("name"),
+        )
+        .filter(festivals_count__gt=0)
+        .values("organizer_name", "festivals_count", "total_attendees")
+        .order_by("-total_attendees")
+    )
+
+    # Условие по агрегату после группировки (в SQL это HAVING).
+    popular = (
+        venues_with_counts.filter(bookings_count__gt=POPULAR_THRESHOLD)
+        .annotate(venue_name=F("name"))
+        .values("venue_name", "bookings_count")
+        .order_by("-bookings_count", "venue_name")
+    )
+
+    context = {
+        "active_bookings_count": active_bookings_count,
+        "summary": summary,
+        "by_venue": by_venue,
+        "by_organizer": by_organizer,
+        "popular": popular,
+        "popular_threshold": POPULAR_THRESHOLD,
+    }
 
     return render(
         request,

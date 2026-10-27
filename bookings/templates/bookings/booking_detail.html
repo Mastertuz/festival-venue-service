@@ -1,54 +1,42 @@
 {% extends "base.html" %}
 
-{% block title %}
-    {% if booking %}Бронирование №{{ booking.id }}{% else %}Бронирование не найдено{% endif %} – Festival Venue Service
-{% endblock %}
+{% block title %}Бронирование №{{ booking.pk }} – Festival Venue Service{% endblock %}
 
 {% block content %}
-    {% if booking %}
-        <div class="card">
-            <div class="card-body">
-                <h1 class="card-title">
-                    Бронирование №{{ booking.id }}
-                </h1>
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title">
+                Бронирование №{{ booking.pk }}
+            </h1>
 
-                <p class="card-text">
-                    <strong>Фестиваль:</strong>
-                    {{ booking.festival_name }}
-                </p>
+            <p class="card-text">
+                <strong>Фестиваль:</strong>
+                {{ booking.festival.name }}
+            </p>
 
-                <p class="card-text">
-                    <strong>Организатор:</strong>
-                    {{ booking.organizer_name }}
-                </p>
+            <p class="card-text">
+                <strong>Организатор:</strong>
+                {{ booking.festival.organizer.name }}
+            </p>
 
-                <p class="card-text">
-                    <strong>Площадка:</strong>
-                    <a href="{% url 'venues:detail' booking.venue_id %}">
-                        {{ booking.venue_name }}
-                    </a>
-                </p>
+            <p class="card-text">
+                <strong>Площадка:</strong>
+                <a href="{% url 'venues:detail' booking.venue.pk %}">
+                    {{ booking.venue.name }}
+                </a>
+            </p>
 
-                <p class="card-text">
-                    <strong>Дата:</strong>
-                    {{ booking.booking_date|date:"d.m.Y" }}
-                </p>
+            <p class="card-text">
+                <strong>Дата:</strong>
+                {{ booking.booking_date|date:"d.m.Y" }}
+            </p>
 
-                <p class="card-text">
-                    <strong>Статус:</strong>
-                    {% include "bookings/includes/booking_status.html" %}
-                </p>
-            </div>
+            <p class="card-text">
+                <strong>Статус:</strong>
+                {% include "bookings/includes/booking_status.html" %}
+            </p>
         </div>
-    {% else %}
-        <h1 class="text-danger">
-            Бронирование не найдено
-        </h1>
-
-        <p>
-            Бронирование с указанным идентификатором отсутствует.
-        </p>
-    {% endif %}
+    </div>
 
     <a
         href="{% url 'bookings:list' %}"
