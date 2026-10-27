@@ -1,69 +1,13 @@
-from contextlib import closing
 from datetime import date
 
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 
-from db.database import get_connection
+from bookings.models import Booking
+from venue_service.search import search_text
+from venues.models import Venue
 
 MAX_NUMBER = 1_000_000_000
-
-VENUES_SQL = """
-    SELECT
-        id,
-        name,
-        capacity
-    FROM venues
-    ORDER BY name;
-"""
-
-VENUES_BY_CAPACITY_SQL = """
-    SELECT
-        id,
-        name,
-        capacity
-    FROM venues
-    WHERE capacity >= ?
-    ORDER BY capacity;
-"""
-
-VENUE_BY_ID_SQL = """
-    SELECT
-        id,
-        name,
-        capacity
-    FROM venues
-    WHERE id = ?;
-"""
-
-VENUE_BUSY_COUNT_SQL = """
-    SELECT
-        COUNT(*) AS busy_count
-    FROM bookings
-    JOIN festivals
-        ON bookings.festival_id = festivals.id
-    WHERE bookings.venue_id = ?
-      AND festivals.date = ?
-      AND bookings.is_cancelled = 0;
-"""
-
-
-FREE_VENUES_SQL = """
-    SELECT
-        venues.id,
-        venues.name,
-        venues.capacity
-    FROM venues
-    WHERE venues.capacity >= ?
-      AND venues.id NOT IN (
-          SELECT bookings.venue_id
-          FROM bookings
-          JOIN festivals
-              ON bookings.festival_id = festivals.id
-          WHERE festivals.date = ?
-            AND bookings.is_cancelled = 0
-      )
-    ORDER BY venues.name;
-"""
+UPCOMING_BOOKINGS_LIMIT = 5
 
 
 def parse_non_negative_int(value):
@@ -95,18 +39,24 @@ def parse_iso_date(value):
 
 
 def venues(request):
-    raw_value = request.GET.get("min_capacity", "")
-    min_capacity, filter_error = parse_non_negative_int(raw_value)
+    raw_capacity = request.GET.get("min_capacity", "")
+    raw_query = request.GET.get("q", "")
+    min_capacity, filter_error = parse_non_negative_int(raw_capacity)
 
-    with closing(get_connection()) as conn:
-        if min_capacity is None:
-            venues_list = conn.execute(VENUES_SQL).fetchall()
-        else:
-            venues_list = conn.execute(VENUES_BY_CAPACITY_SQL, [min_capacity]).fetchall()
+    # Все площадки; порядок по названию задан в Meta модели Venue.
+    venues_list = Venue.objects.all()
+
+    # Поиск по части названия (регистр не учитывается).
+    venues_list = search_text(venues_list, ["name"], raw_query)
+
+    # Фильтр по вместимости; результат сортируется по вместимости, затем по названию.
+    if min_capacity is not None:
+        venues_list = venues_list.filter(capacity__gte=min_capacity).order_by("capacity", "name")
 
     context = {
         "venues": venues_list,
-        "min_capacity": raw_value.strip(),
+        "min_capacity": raw_capacity.strip(),
+        "query": raw_query.strip(),
         "filter_error": filter_error,
     }
 
@@ -118,26 +68,27 @@ def venues(request):
 
 
 def venue_detail(request, venue_id):
-    available = None
+    # Площадка по первичному ключу; если её нет, get_object_or_404() вернёт ответ 404
+    # (исключение Http404 обрабатывает handler404 проекта).
+    venue = get_object_or_404(Venue, pk=venue_id)
 
-    with closing(get_connection()) as conn:
-        venue = conn.execute(VENUE_BY_ID_SQL, [venue_id]).fetchone()
-        if venue is not None:
-            busy = conn.execute(
-                VENUE_BUSY_COUNT_SQL, [venue_id, date.today().isoformat()]
-            ).fetchone()
-            available = busy["busy_count"] == 0
+    # Обратная связь по related_name: бронирования этой площадки вместе с фестивалями
+    # (select_related), только активные и не в прошлом.
+    upcoming_bookings = venue.bookings.select_related("festival").filter(
+        is_cancelled=False,
+        festival__date__gte=date.today(),
+    )[:UPCOMING_BOOKINGS_LIMIT]
 
     context = {
         "venue": venue,
-        "available": available,
+        "available": venue.is_available_on(date.today()),
+        "upcoming_bookings": upcoming_bookings,
     }
 
     return render(
         request,
         "venues/venue_detail.html",
         context,
-        status=404 if venue is None else 200,
     )
 
 
@@ -149,12 +100,21 @@ def available(request):
     attendees, attendees_error = parse_non_negative_int(raw_attendees)
 
     searched = search_date is not None and not attendees_error
-    venues_list = []
+    venues_list = Venue.objects.none()
     if searched:
-        with closing(get_connection()) as conn:
-            venues_list = conn.execute(
-                FREE_VENUES_SQL, [attendees or 0, search_date.isoformat()]
-            ).fetchall()
+        # Идентификаторы площадок с активным бронированием на выбранную дату
+        # (условие по полю связанной модели festival__date).
+        booked_venue_ids = Booking.objects.filter(
+            festival__date=search_date,
+            is_cancelled=False,
+        ).values_list("venue_id", flat=True)
+
+        # Исключаем занятые площадки; оставшиеся отбираем по вместимости.
+        venues_list = (
+            Venue.objects.exclude(pk__in=booked_venue_ids)
+            .filter(capacity__gte=attendees or 0)
+            .order_by("name")
+        )
 
     context = {
         "venues": venues_list,

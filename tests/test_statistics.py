@@ -71,7 +71,7 @@ def test_statistics_in_empty_database_shows_placeholders(empty_db, squash):
     assert "— – —" in html  # MIN и MAX отсутствуют (NULL)
 
 
-def test_statistics_is_in_navigation(web_data, squash):
+def test_statistics_is_in_navigation(web_data, orm_data, squash):
     for url in ("/", "/venues/", "/bookings/", "/bookings/statistics/"):
         assert 'href="/bookings/statistics/">Статистика</a>' in squash(Client().get(url)), url
 

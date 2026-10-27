@@ -32,7 +32,7 @@ def test_main_js_sets_current_year():
     assert "getFullYear" in js
 
 
-def test_base_template_links_static_files(web_data, squash):
+def test_base_template_links_static_files(orm_data, squash):
     html = squash(Client().get("/"))
     assert 'href="/static/homepage/css/style.css"' in html
     assert 'src="/static/homepage/img/logo.png"' in html
@@ -41,7 +41,7 @@ def test_base_template_links_static_files(web_data, squash):
     assert '<span id="current-year"></span>' in html
 
 
-def test_all_pages_inherit_static_files_from_base_template(web_data):
+def test_all_pages_inherit_static_files_from_base_template(web_data, orm_data):
     for url in (
         "/",
         "/venues/",
@@ -56,6 +56,6 @@ def test_all_pages_inherit_static_files_from_base_template(web_data):
         assert "/static/homepage/js/main.js" in html, url
 
 
-def test_cards_and_statuses_use_custom_classes(web_data):
+def test_cards_and_statuses_use_custom_classes(web_data, orm_data):
     assert "venue-card" in Client().get("/venues/").content.decode()
     assert "booking-status" in Client().get("/bookings/").content.decode()

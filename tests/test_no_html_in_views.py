@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import homepage.views
@@ -21,5 +22,5 @@ def test_views_do_not_build_html_in_python():
 def test_views_use_render():
     for path in VIEW_FILES:
         source = path.read_text(encoding="utf-8")
-        assert "from django.shortcuts import render" in source, path.name
+        assert re.search(r"from django\.shortcuts import .*\brender\b", source), path.name
         assert "return render(" in source, path.name

@@ -25,7 +25,7 @@
     <ul class="list-group">
         {% for festival in next_festivals %}
             <li class="list-group-item d-flex justify-content-between">
-                <span>{{ festival.name }} — {{ festival.organizer_name }}</span>
+                <span>{{ festival.name }} — {{ festival.organizer.name }}</span>
                 <span>{{ festival.date|date:"d.m.Y" }}</span>
             </li>
         {% empty %}

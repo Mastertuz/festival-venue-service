@@ -53,13 +53,14 @@ def test_route_converter_mismatch_also_shows_custom_404_page():
 
 
 @NO_DEBUG
-def test_missing_objects_keep_their_own_404_pages(web_data):
-    venue = Client().get("/venues/999/")
+def test_missing_venue_uses_project_404_page_and_missing_booking_keeps_its_own(web_data, orm_data):
+    venue = Client().get("/venues/999999/")
     booking = Client().get("/bookings/999/")
     assert venue.status_code == booking.status_code == 404
-    assert "Площадка не найдена" in venue.content.decode()
+    # get_object_or_404() возбуждает Http404 — страницу строит handler404
+    assert "homepage/404.html" in template_names(venue)
     assert "Бронирование не найдено" in booking.content.decode()
-    assert "homepage/404.html" not in template_names(venue)
+    assert "homepage/404.html" not in template_names(booking)
 
 
 def test_page_not_found_view_returns_404_response():

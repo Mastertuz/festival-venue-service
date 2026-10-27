@@ -1,44 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}
-    {% if venue %}{{ venue.name }}{% else %}Площадка не найдена{% endif %} – Festival Venue Service
-{% endblock %}
+{% block title %}{{ venue.name }} – Festival Venue Service{% endblock %}
 
 {% block content %}
-    {% if venue %}
-        <div class="card">
-            <div class="card-body">
-                <h1 class="card-title">
-                    {{ venue.name }}
-                </h1>
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title">
+                {{ venue.name }}
+            </h1>
 
-                <p class="card-text">
-                    <strong>ID:</strong> {{ venue.id }}
-                </p>
+            <p class="card-text">
+                <strong>ID:</strong> {{ venue.id }}
+            </p>
 
-                <p class="card-text">
-                    <strong>Вместимость:</strong>
-                    {{ venue.capacity }} мест
-                </p>
+            <p class="card-text">
+                <strong>Вместимость:</strong>
+                {{ venue.capacity }} мест
+            </p>
 
-                <p class="card-text">
-                    Доступность на текущую дату:
-                    {% if available %}
-                        <span class="badge bg-success">свободна</span>
-                    {% else %}
-                        <span class="badge bg-danger">занята</span>
-                    {% endif %}
-                </p>
-            </div>
+            <p class="card-text">
+                Доступность на текущую дату:
+                {% if available %}
+                    <span class="badge bg-success">свободна</span>
+                {% else %}
+                    <span class="badge bg-danger">занята</span>
+                {% endif %}
+            </p>
+
+            <h2 class="h5 mt-4">Ближайшие бронирования</h2>
+            <ul class="list-group mb-3">
+                {% for booking in upcoming_bookings %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <a href="{% url 'bookings:detail' booking.pk %}">
+                            {{ booking.festival.name }}
+                        </a>
+                        <span>{{ booking.festival.date|date:"d.m.Y" }}</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item">Ближайших бронирований нет.</li>
+                {% endfor %}
+            </ul>
         </div>
-    {% else %}
-        <h1 class="text-danger">
-            Площадка не найдена
-        </h1>
-        <p>
-            Площадка с указанным идентификатором отсутствует.
-        </p>
-    {% endif %}
+    </div>
 
     <a
         href="{% url 'venues:list' %}"

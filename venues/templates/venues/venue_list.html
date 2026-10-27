@@ -7,6 +7,16 @@
 
     <form method="get" class="row g-2 align-items-end mb-3">
         <div class="col-auto">
+            <label for="q" class="form-label">Название содержит</label>
+            <input
+                type="text"
+                class="form-control"
+                id="q"
+                name="q"
+                value="{{ query }}"
+            >
+        </div>
+        <div class="col-auto">
             <label for="min_capacity" class="form-label">Вместимость не менее</label>
             <input
                 type="number"
