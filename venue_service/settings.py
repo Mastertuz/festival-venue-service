@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "homepage",
     "venues",
     "bookings",
+    "festivals",
 ]
 
 MIDDLEWARE = [

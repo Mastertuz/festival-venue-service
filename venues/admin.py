@@ -1,1 +1,9 @@
-"""Регистрация моделей приложения в админ-панели (заполняется в следующих работах)."""
+from django.contrib import admin
+
+from .models import Venue
+
+
+@admin.register(Venue)
+class VenueAdmin(admin.ModelAdmin):
+    list_display = ("name", "capacity")
+    search_fields = ("name",)
