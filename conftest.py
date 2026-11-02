@@ -45,7 +45,9 @@ def orm_data(db):
         organizer=organizer,
     )
     active = Booking.objects.create(festival=festival, venue=park)
-    cancelled = Booking.objects.create(festival=festival, venue=arena, is_cancelled=True)
+    cancelled = Booking.objects.create(
+        festival=festival, venue=arena, status=Booking.Status.CANCELLED
+    )
     return {
         "organizer": organizer,
         "park": park,

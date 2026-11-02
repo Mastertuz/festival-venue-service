@@ -81,7 +81,10 @@ def transfer(source_path=None):
                 defaults={
                     "festival_id": row["festival_id"],
                     "venue_id": row["venue_id"],
-                    "is_cancelled": bool(row["is_cancelled"]),
+                    # В исходной базе признак отмены 0/1, в моделях Django — статус.
+                    "status": (
+                        Booking.Status.CANCELLED if row["is_cancelled"] else Booking.Status.ACTIVE
+                    ),
                 },
             )
 
