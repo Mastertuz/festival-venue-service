@@ -104,9 +104,7 @@ def test_second_active_booking_on_other_day_does_not_block(orm_data, squash):
 
 
 def test_orm_query_for_free_venues_uses_exclude_and_filter(orm_data):
-    booked = Booking.objects.filter(festival__date=date.today(), is_cancelled=False).values_list(
-        "venue_id", flat=True
-    )
+    booked = Booking.objects.active().for_date(date.today()).values_list("venue_id", flat=True)
     free = list(Venue.objects.exclude(pk__in=booked).values_list("name", flat=True))
     assert free == ["Арена <b>"]
 
@@ -117,4 +115,4 @@ def test_search_page_is_linked_from_venue_list(orm_data, squash):
 
 def test_available_route_is_not_taken_for_venue_id(orm_data):
     assert Client().get("/venues/available/").status_code == 200
-    assert Client().get("/venues/%d/" % orm_data["park"].pk).status_code == 200
+    assert Client().get(orm_data["park"].get_absolute_url()).status_code == 200

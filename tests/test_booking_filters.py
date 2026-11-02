@@ -39,7 +39,9 @@ def many(db):
             organizer=organizer,
         )
         bookings[name] = Booking.objects.create(
-            festival=festival, venue=venue, is_cancelled=cancelled
+            festival=festival,
+            venue=venue,
+            status=Booking.Status.CANCELLED if cancelled else Booking.Status.ACTIVE,
         )
     return {
         "art": art,
@@ -275,5 +277,6 @@ def test_changing_one_parameter_changes_result(many):
 
 
 def test_query_count_does_not_depend_on_number_of_bookings(many, django_assert_num_queries):
-    with django_assert_num_queries(4):
+    # 4 запроса страницы и count() контекстного процессора site_context.
+    with django_assert_num_queries(5):
         get({"sort": "organizer"})

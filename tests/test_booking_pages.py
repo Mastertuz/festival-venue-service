@@ -54,7 +54,7 @@ def test_bookings_list_rows_are_dictionaries_with_related_names(orm_data):
         "venue_name",
         "capacity",
         "organizer_name",
-        "is_cancelled",
+        "status",
     }
     assert rows[0]["organizer_name"] == "АНО «Арт-Ивент»"
     assert isinstance(rows[0]["booking_date"], date)
@@ -98,8 +98,9 @@ def test_booking_list_shows_all_bookings_by_default(orm_data, squash):
 
 
 def test_booking_list_query_count(orm_data, django_assert_num_queries):
-    """Число записей, страница бронирований, список площадок и список организаторов для формы."""
-    with django_assert_num_queries(4):
+    """Число записей, страница бронирований, площадки и организаторы для формы и count()
+    контекстного процессора site_context (число площадок в навигации)."""
+    with django_assert_num_queries(5):
         Client().get("/bookings/")
 
 
@@ -112,7 +113,7 @@ def test_booking_detail_shows_related_objects(orm_data, squash):
     assert f"<title>Бронирование №{pk} – Festival Venue Service</title>" in html
     assert "<strong>Фестиваль:</strong> Фестиваль уличной музыки" in html
     assert "<strong>Организатор:</strong> АНО «Арт-Ивент»" in html
-    assert 'href="/venues/%d/"> Городской парк </a>' % orm_data["park"].pk in html
+    assert 'href="%s"> Городской парк </a>' % orm_data["park"].get_absolute_url() in html
     assert "Активно" in html
 
 
@@ -139,8 +140,9 @@ def test_booking_detail_in_empty_database_returns_404(db):
 
 
 def test_booking_detail_uses_select_related_single_query(orm_data, django_assert_num_queries):
-    """Бронирование, фестиваль, организатор и площадка загружаются одним запросом."""
-    with django_assert_num_queries(1):
+    """Бронирование, фестиваль, организатор и площадка загружаются одним запросом
+    (второй запрос — count() контекстного процессора site_context)."""
+    with django_assert_num_queries(2):
         response = Client().get("/bookings/%d/" % orm_data["active"].pk)
         assert response.status_code == 200
 

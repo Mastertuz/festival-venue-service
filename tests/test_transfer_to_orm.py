@@ -68,8 +68,8 @@ def test_foreign_keys_point_to_transferred_objects(source):
 def test_date_string_becomes_date_and_flag_becomes_bool(source):
     transfer(source)
     assert Festival.objects.get(pk=30).date == date(2026, 11, 7)
-    assert Booking.objects.get(pk=40).is_cancelled is False
-    assert Booking.objects.get(pk=41).is_cancelled is True
+    assert Booking.objects.get(pk=40).status == Booking.Status.ACTIVE
+    assert Booking.objects.get(pk=41).status == Booking.Status.CANCELLED
 
 
 def test_transfer_is_repeatable_without_duplicates(source):
@@ -165,6 +165,6 @@ def test_project_source_database_is_consistent():
 def test_project_data_is_transferred_with_relations():
     counts = transfer(PROJECT_SOURCE)
     assert counts == {"organizers": 3, "venues": 4, "festivals": 7, "bookings": 8}
-    assert Booking.objects.get(pk=6).is_cancelled is True
-    assert Venue.objects.get(pk=1).bookings.filter(is_cancelled=False).count() == 3
+    assert Booking.objects.get(pk=6).status == Booking.Status.CANCELLED
+    assert Venue.objects.get(pk=1).bookings.active().count() == 3
     assert Venue.objects.get(name="Летняя эстрада").bookings.count() == 0

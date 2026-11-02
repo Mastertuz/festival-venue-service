@@ -26,7 +26,7 @@ def test_allowed_hosts_are_filled_for_local_machine():
 
 
 @NO_DEBUG
-def test_unknown_address_shows_custom_404_page(squash):
+def test_unknown_address_shows_custom_404_page(db, squash):
     response = Client().get("/nonexistent/")
     html = squash(response)
     assert response.status_code == 404
@@ -37,7 +37,7 @@ def test_unknown_address_shows_custom_404_page(squash):
 
 
 @NO_DEBUG
-def test_custom_404_page_uses_base_template_and_links_to_home(squash):
+def test_custom_404_page_uses_base_template_and_links_to_home(db, squash):
     response = Client().get("/nonexistent/")
     html = squash(response)
     assert "base.html" in template_names(response)
@@ -46,8 +46,8 @@ def test_custom_404_page_uses_base_template_and_links_to_home(squash):
 
 
 @NO_DEBUG
-def test_route_converter_mismatch_also_shows_custom_404_page():
-    response = Client().get("/venues/abc/")
+def test_route_converter_mismatch_also_shows_custom_404_page(db):
+    response = Client().get("/venues/абв/")
     assert response.status_code == 404
     assert "homepage/404.html" in template_names(response)
 
@@ -62,7 +62,7 @@ def test_missing_objects_use_project_404_page(orm_data):
     assert "homepage/404.html" in template_names(booking)
 
 
-def test_page_not_found_view_returns_404_response():
+def test_page_not_found_view_returns_404_response(db):
     request = RequestFactory().get("/nonexistent/")
     response = homepage.views.page_not_found(request, Exception("not found"))
     assert response.status_code == 404

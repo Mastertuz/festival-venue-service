@@ -79,7 +79,8 @@ def test_index_in_empty_database_shows_placeholders(db, squash):
 
 
 def test_index_uses_two_queries(orm_data, django_assert_num_queries):
-    """Счётчик и ближайшие фестивали с организаторами — два запроса (select_related)."""
-    with django_assert_num_queries(2):
+    """Счётчик и ближайшие фестивали с организаторами — два запроса (select_related);
+    третий запрос — count() контекстного процессора site_context."""
+    with django_assert_num_queries(3):
         response = Client().get("/")
         response.content  # noqa: B018 — шаблон обращается к festival.organizer.name

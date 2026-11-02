@@ -29,8 +29,8 @@ def test_venues_list_shows_venues_from_database(orm_data, squash):
     assert "<title>Площадки – Festival Venue Service</title>" in html
     assert "Городской парк" in html
     assert "Вместимость: 5000 мест" in html
-    assert 'href="/venues/%d/"' % orm_data["park"].pk in html
-    assert 'href="/venues/%d/"' % orm_data["arena"].pk in html
+    assert 'href="%s"' % orm_data["park"].get_absolute_url() in html
+    assert 'href="%s"' % orm_data["arena"].get_absolute_url() in html
 
 
 def test_venues_list_escapes_html_in_names(orm_data):
@@ -51,7 +51,7 @@ def test_venues_list_shows_message_when_there_are_no_venues(db):
 
 
 def test_venue_detail_shows_booked_venue_as_busy(orm_data, squash):
-    response = Client().get("/venues/%d/" % orm_data["park"].pk)
+    response = Client().get(orm_data["park"].get_absolute_url())
     html = squash(response)
     assert response.status_code == 200
     assert "venues/venue_detail.html" in template_names(response)
@@ -61,25 +61,25 @@ def test_venue_detail_shows_booked_venue_as_busy(orm_data, squash):
 
 
 def test_venue_detail_shows_free_venue_as_available(orm_data, squash):
-    html = squash(Client().get("/venues/%d/" % orm_data["arena"].pk))
+    html = squash(Client().get(orm_data["arena"].get_absolute_url()))
     assert 'class="badge bg-success">свободна</span>' in html
 
 
 def test_venue_detail_has_link_back_to_list(orm_data, squash):
-    html = squash(Client().get("/venues/%d/" % orm_data["park"].pk))
+    html = squash(Client().get(orm_data["park"].get_absolute_url()))
     assert 'href="/venues/"' in html
     assert "← к списку площадок" in html
 
 
 def test_venue_detail_shows_upcoming_bookings_via_reverse_relation(orm_data, squash):
-    html = squash(Client().get("/venues/%d/" % orm_data["park"].pk))
+    html = squash(Client().get(orm_data["park"].get_absolute_url()))
     assert "Ближайшие бронирования" in html
     assert "Фестиваль уличной музыки" in html
     assert 'href="/bookings/%d/"' % orm_data["active"].pk in html
 
 
 def test_cancelled_bookings_are_not_listed_as_upcoming(orm_data, squash):
-    html = squash(Client().get("/venues/%d/" % orm_data["arena"].pk))
+    html = squash(Client().get(orm_data["arena"].get_absolute_url()))
     assert "Ближайших бронирований нет." in html
 
 
@@ -91,7 +91,7 @@ def test_past_bookings_are_not_listed_as_upcoming(orm_data, squash):
         organizer=orm_data["organizer"],
     )
     Booking.objects.create(festival=past, venue=orm_data["arena"])
-    html = squash(Client().get("/venues/%d/" % orm_data["arena"].pk))
+    html = squash(Client().get(orm_data["arena"].get_absolute_url()))
     assert "Прошлогодний" not in html
 
 
@@ -107,7 +107,8 @@ def test_venue_detail_in_empty_database_returns_404(db):
 
 def test_venue_card_uses_default_filter_for_empty_name():
     html = render_to_string(
-        "venues/includes/venue_card.html", {"venue": Venue(id=7, name="", capacity=100)}
+        "venues/includes/venue_card.html",
+        {"venue": Venue(id=7, name="", capacity=100, slug="venue-7")},
     )
     assert "Без названия" in html
     assert "Вместимость: 100 мест" in html
@@ -121,7 +122,7 @@ def test_venues_are_read_through_orm_not_from_json(orm_data):
     orm_data["park"].name = "Парк (обновлено)"
     orm_data["park"].save()
     assert "Парк (обновлено)" in Client().get("/venues/").content.decode()
-    assert "Парк (обновлено)" in Client().get("/venues/%d/" % orm_data["park"].pk).content.decode()
+    assert "Парк (обновлено)" in Client().get(orm_data["park"].get_absolute_url()).content.decode()
 
 
 def test_venues_can_be_filtered_by_min_capacity(orm_data, squash):

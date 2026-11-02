@@ -61,7 +61,7 @@ def test_check_constraints_reject_invalid_values(db):
 
 def test_booking_is_active_by_default(orm_data):
     booking = Booking.objects.create(festival=orm_data["festival"], venue=orm_data["park"])
-    assert booking.is_cancelled is False
+    assert booking.status == Booking.Status.ACTIVE
 
 
 def test_foreign_keys_give_access_to_related_objects(orm_data):
@@ -81,11 +81,11 @@ def test_booking_date_is_festival_date(orm_data):
     assert orm_data["active"].booking_date == orm_data["festival"].date
 
 
-def test_cancel_saves_only_is_cancelled(orm_data):
+def test_cancel_saves_only_status(orm_data):
     booking = orm_data["active"]
     booking.cancel()
-    assert booking.is_cancelled is True
-    assert Booking.objects.get(pk=booking.pk).is_cancelled is True
+    assert booking.status == Booking.Status.CANCELLED
+    assert Booking.objects.get(pk=booking.pk).status == Booking.Status.CANCELLED
 
 
 def test_venue_availability_ignores_cancelled_bookings(orm_data):

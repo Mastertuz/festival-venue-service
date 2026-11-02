@@ -45,7 +45,7 @@ def test_all_pages_inherit_static_files_from_base_template(orm_data):
     for url in (
         "/",
         "/venues/",
-        "/venues/1/",
+        orm_data["park"].get_absolute_url(),
         "/venues/available/",
         "/bookings/",
         "/bookings/1/",

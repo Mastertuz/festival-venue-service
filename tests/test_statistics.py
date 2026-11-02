@@ -113,7 +113,8 @@ def test_statistics_in_empty_database_shows_placeholders(db, squash):
 
 
 def test_statistics_makes_five_queries(orm_data, django_assert_num_queries):
-    with django_assert_num_queries(5):
+    # 5 запросов статистики и count() контекстного процессора site_context.
+    with django_assert_num_queries(6):
         response = Client().get("/bookings/statistics/")
         context = response.context
         list(context["by_venue"]), list(context["by_organizer"]), list(context["popular"])
