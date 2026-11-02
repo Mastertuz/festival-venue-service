@@ -47,7 +47,8 @@ def test_status_choices_have_codes_and_russian_labels():
 
 
 def test_new_booking_is_active_and_has_no_is_cancelled_field(statuses):
-    booking = Booking.objects.create(festival=statuses["active"].festival, venue=statuses["venue"])
+    other_venue = Venue.objects.create(name="Другая площадка", capacity=500)
+    booking = Booking.objects.create(festival=statuses["active"].festival, venue=other_venue)
     assert booking.status == Booking.Status.ACTIVE
     assert "is_cancelled" not in {field.name for field in Booking._meta.get_fields()}
 

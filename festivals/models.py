@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -50,6 +51,23 @@ class Festival(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        """Перенос фестиваля не должен создавать второе активное бронирование площадки на дату."""
+        super().clean()
+        if not self.pk or not self.date:
+            return
+        own_bookings = self.bookings.active()
+        conflicts = (
+            self.bookings.model.objects.active()
+            .for_date(self.date)
+            .filter(venue_id__in=own_bookings.values("venue_id"))
+            .exclude(festival_id=self.pk)
+        )
+        if conflicts.exists():
+            raise ValidationError(
+                "Площадка уже забронирована на эту дату: есть активное бронирование."
+            )
 
     class Meta:
         ordering = ["date", "pk"]

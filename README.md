@@ -579,11 +579,15 @@ with closing(get_connection()) as conn:
 `organizer.festivals.all()`. В базе Django хранятся столбцы `venue_id`, `festival_id`,
 `organizer_id`; в коде доступны и объект (`booking.venue`), и идентификатор
 (`booking.venue_id`). Дата бронирования, как и в ПР7, берётся у фестиваля. Правило «одна
-площадка не может иметь два активных бронирования на одну дату» проверяется в
-`Booking.clean()` (его вызывают формы административной панели), в массовом действии
-«Вернуть в активные» и во view поиска свободных площадок; на уровне базы данных это
-ограничение не задано, поэтому при создании записей через `create()` или `save()` без
-`full_clean()` оно не проверяется.
+площадка не может иметь два активных бронирования на одну дату» действует на двух уровнях.
+Понятное сообщение формам даёт `Booking.clean()` (и `Festival.clean()` при переносе
+фестиваля на другую дату); массовое действие «Вернуть в активные» и view поиска свободных
+площадок учитывают его сами. Дата хранится у фестиваля, поэтому ограничение уровня базы
+данных задано триггерами SQLite в миграции `bookings.0006_active_booking_conflict_triggers`:
+они отменяют (`RAISE(ABORT)`, в Django — `IntegrityError`) вставку или изменение записи,
+создающее второе активное бронирование площадки на дату, и перенос фестиваля на занятую
+дату. Отменённые и завершённые бронирования правило не нарушают. Благодаря триггерам оно
+соблюдается и при `create()`, `update()` и в shell, где `clean()` не вызывается.
 
 ### Миграции
 
@@ -729,7 +733,8 @@ booking.venue.bookings.count()                                         # обр�
 Миграции `bookings`: `0002_booking_status` (поле `status`), `0003_migrate_booking_statuses`
 (перенос данных: `is_cancelled=True` → `cancelled`, остальные → `active`, обратная операция
 тоже описана), `0004_remove_booking_is_cancelled` (удаление старого поля),
-`0005_booking_status_help_text`. Статус `completed` по дате автоматически не назначается:
+`0005_booking_status_help_text`, `0006_active_booking_conflict_triggers` (триггеры базы
+данных, правило «одно активное бронирование площадки на дату»). Статус `completed` по дате автоматически не назначается:
 его выставляют вручную (метод `complete()` или действие в админ-панели).
 
 `BookingQuerySet` и `BookingManager` (`Booking.objects`) содержат методы `active()`,
@@ -874,7 +879,8 @@ festival-venue-service/
 │   │   ├── 0002_booking_status.py
 │   │   ├── 0003_migrate_booking_statuses.py
 │   │   ├── 0004_remove_booking_is_cancelled.py
-│   │   └── 0005_booking_status_help_text.py
+│   │   ├── 0005_booking_status_help_text.py
+│   │   └── 0006_active_booking_conflict_triggers.py
 │   ├── models.py
 │   ├── templates/
 │   │   └── bookings/
@@ -954,6 +960,7 @@ festival-venue-service/
     ├── test_booking_filters.py
     ├── test_booking_statuses.py
     ├── test_venue_slug.py
+    ├── test_booking_db_constraint.py
     └── test_admin.py
 ```
 
@@ -1066,7 +1073,8 @@ Django-приложение бронирований:
 Содержит автоматизированные тесты проекта: тесты классов и хранилища (ПР3), тесты моделей
 Django и переноса данных (`test_models.py`, `test_transfer_to_orm.py`), тесты ПР10
 (`test_booking_statuses.py` — статусы, менеджер и миграция данных, `test_venue_slug.py` —
-slug, `GeneratedField` и контекстный процессор, `test_admin.py` — административная панель)
+slug, `GeneratedField` и контекстный процессор, `test_admin.py` — административная панель, `test_booking_db_constraint.py` — триггеры
+базы данных)
 и тесты веб-слоя: `test_urls.py` (именованные маршруты), `test_404.py` (обработчик ошибки 404), `test_homepage.py`, `test_venue_pages.py`,
 `test_booking_pages.py`, `test_free_venues.py`, `test_statistics.py` (шаблоны, контекст,
 коды ответов, данные из ORM), `test_booking_filters.py` (поиск, фильтры, сортировка и
@@ -1289,7 +1297,7 @@ git status
   `get_absolute_url()`, страница площадки по slug и перенаправление старых адресов;
 * контекстный процессор `site_context`;
 * проверка SQL-запросов и устранение N+1 (`list_select_related`, `select_related()`);
-* тесты: 366 проверок, `flake8` и `black` без замечаний.
+* тесты: 378 проверок, `flake8` и `black` без замечаний.
 
 JSON-файлы сохранены как исходные данные и хранилище консольной версии. Веб-формы
 создания и редактирования записей пока не реализованы: операции создания, изменения и

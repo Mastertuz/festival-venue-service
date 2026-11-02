@@ -60,7 +60,7 @@ def test_check_constraints_reject_invalid_values(db):
 
 
 def test_booking_is_active_by_default(orm_data):
-    booking = Booking.objects.create(festival=orm_data["festival"], venue=orm_data["park"])
+    booking = Booking.objects.create(festival=orm_data["festival"], venue=orm_data["arena"])
     assert booking.status == Booking.Status.ACTIVE
 
 
