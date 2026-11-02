@@ -1,6 +1,6 @@
 from datetime import date
 
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from bookings.models import Booking
 from venue_service.params import parse_iso_date, parse_non_negative_int
@@ -39,17 +39,24 @@ def venues(request):
     )
 
 
-def venue_detail(request, venue_id):
-    # Площадка по первичному ключу; если её нет, get_object_or_404() вернёт ответ 404
-    # (исключение Http404 обрабатывает handler404 проекта).
+def venue_redirect(request, venue_id):
+    """Постоянное перенаправление со старого адреса /venues/<id>/ на /venues/<slug>/."""
     venue = get_object_or_404(Venue, pk=venue_id)
+    return redirect(venue, permanent=True)
+
+
+def venue_detail(request, slug):
+    # Площадка по slug из адреса; если её нет, get_object_or_404() вернёт ответ 404
+    # (исключение Http404 обрабатывает handler404 проекта).
+    venue = get_object_or_404(Venue, slug=slug)
 
     # Обратная связь по related_name: бронирования этой площадки вместе с фестивалями
     # (select_related), только активные и не в прошлом.
-    upcoming_bookings = venue.bookings.select_related("festival").filter(
-        is_cancelled=False,
-        festival__date__gte=date.today(),
-    )[:UPCOMING_BOOKINGS_LIMIT]
+    upcoming_bookings = (
+        venue.bookings.active()
+        .select_related("festival")
+        .filter(festival__date__gte=date.today())[:UPCOMING_BOOKINGS_LIMIT]
+    )
 
     context = {
         "venue": venue,
@@ -75,11 +82,10 @@ def available(request):
     venues_list = Venue.objects.none()
     if searched:
         # Идентификаторы площадок с активным бронированием на выбранную дату
-        # (условие по полю связанной модели festival__date).
-        booked_venue_ids = Booking.objects.filter(
-            festival__date=search_date,
-            is_cancelled=False,
-        ).values_list("venue_id", flat=True)
+        # (менеджер: active() и for_date()).
+        booked_venue_ids = (
+            Booking.objects.active().for_date(search_date).values_list("venue_id", flat=True)
+        )
 
         # Исключаем занятые площадки; оставшиеся отбираем по вместимости.
         venues_list = (

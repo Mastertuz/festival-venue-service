@@ -37,10 +37,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "homepage",
-    "venues",
-    "bookings",
-    "festivals",
+    # Конфигурации приложений указаны явно: через них применяются русские verbose_name.
+    "homepage.apps.HomepageConfig",
+    "venues.apps.VenuesConfig",
+    "bookings.apps.BookingsConfig",
+    "festivals.apps.FestivalsConfig",
 ]
 
 MIDDLEWARE = [
@@ -77,6 +78,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Название сервиса и число площадок для общего шаблона (ПР10).
+                "homepage.context_processors.site_context",
             ],
         },
     },

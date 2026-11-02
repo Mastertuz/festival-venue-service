@@ -5,13 +5,36 @@
 {% block content %}
     <h1>Статистика бронирований</h1>
 
+    <h2 class="h4">Бронирования по статусам</h2>
     <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Всего бронирований</div>
+                <div class="fs-3">{{ status_counts.total_bookings }}</div>
+            </div></div>
+        </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card"><div class="card-body">
                 <div class="text-muted">Активных бронирований</div>
                 <div class="fs-3">{{ active_bookings_count }}</div>
             </div></div>
         </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Отменённых</div>
+                <div class="fs-3">{{ status_counts.cancelled_bookings }}</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card"><div class="card-body">
+                <div class="text-muted">Завершённых</div>
+                <div class="fs-3">{{ status_counts.completed_bookings }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <h2 class="h4">Площадки</h2>
+    <div class="row g-3 mb-4">
         <div class="col-sm-6 col-lg-3">
             <div class="card"><div class="card-body">
                 <div class="text-muted">Площадок</div>

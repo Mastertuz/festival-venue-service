@@ -1,6 +1,14 @@
-{% if booking.is_cancelled %}
+{% comment %}
+    Статус бронирования. Шаблон получает и словарь из values() (booking.status),
+    и объект модели Booking, поэтому состояние проверяется по коду статуса.
+{% endcomment %}
+{% if booking.status == "cancelled" %}
     <span class="badge bg-secondary booking-status booking-status-cancelled">
         Отменено
+    </span>
+{% elif booking.status == "completed" %}
+    <span class="badge bg-info text-dark booking-status booking-status-completed">
+        Завершено
     </span>
 {% else %}
     <span class="badge bg-success booking-status booking-status-active">

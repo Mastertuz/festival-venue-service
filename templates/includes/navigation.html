@@ -1,6 +1,6 @@
 <nav class="nav">
     <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
-    <a class="nav-link" href="{% url 'venues:list' %}">Площадки</a>
+    <a class="nav-link" href="{% url 'venues:list' %}">Площадки ({{ venues_count }})</a>
     <a class="nav-link" href="{% url 'bookings:list' %}">Бронирования</a>
     <a class="nav-link" href="{% url 'bookings:statistics' %}">Статистика</a>
 </nav>

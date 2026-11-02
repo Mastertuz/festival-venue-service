@@ -9,7 +9,7 @@ from festivals.models import Festival
 def index(request):
     context = {
         # Количество активных бронирований (агрегат count()).
-        "active_bookings_count": Booking.objects.filter(is_cancelled=False).count(),
+        "active_bookings_count": Booking.objects.active().count(),
         # Три ближайших фестиваля вместе с организаторами одним запросом (select_related);
         # порядок по дате задан в Meta модели, срез [:3] превращается в LIMIT 3.
         "next_festivals": Festival.objects.select_related("organizer").filter(

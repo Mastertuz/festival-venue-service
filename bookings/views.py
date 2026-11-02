@@ -41,9 +41,9 @@ def bookings(request):
     # Все бронирования; порядок по умолчанию (по дате фестиваля) задан в Meta модели.
     bookings_data = Booking.objects.all()
 
-    # Фильтр по статусу: только активные бронирования.
+    # Фильтр по статусу: только активные бронирования (метод пользовательского QuerySet).
     if only_active:
-        bookings_data = bookings_data.filter(is_cancelled=False)
+        bookings_data = bookings_data.active()
 
     # Фильтр по дате: условие по полю связанной модели (дата проведения фестиваля).
     selected_date, date_error = parse_iso_date(raw_date)
@@ -92,7 +92,7 @@ def bookings(request):
         "venue_name",
         "capacity",
         "organizer_name",
-        "is_cancelled",
+        "status",
     )
 
     # Пагинация применяется после фильтрации и сортировки. get_page() при некорректном номере
@@ -143,8 +143,14 @@ def booking_detail(request, booking_id):
 
 
 def statistics(request):
-    # Количество активных бронирований и сводные показатели вместимости площадок.
-    active_bookings_count = Booking.objects.filter(is_cancelled=False).count()
+    # Количество бронирований по статусам одним запросом: Count() с условием Q(status=...).
+    status_counts = Booking.objects.aggregate(
+        total_bookings=Count("id"),
+        active_bookings=Count("id", filter=Q(status=Booking.Status.ACTIVE)),
+        cancelled_bookings=Count("id", filter=Q(status=Booking.Status.CANCELLED)),
+        completed_bookings=Count("id", filter=Q(status=Booking.Status.COMPLETED)),
+    )
+    # Сводные показатели вместимости площадок.
     summary = Venue.objects.aggregate(
         venues_count=Count("id"),
         min_capacity=Min("capacity"),
@@ -154,10 +160,10 @@ def statistics(request):
     )
 
     # Активные бронирования по площадкам. Запрос строится от модели Venue, поэтому площадки без
-    # бронирований тоже попадают в результат (аналог LEFT JOIN); условие is_cancelled=False
+    # бронирований тоже попадают в результат (аналог LEFT JOIN); условие по статусу
     # применяется внутри Count(), а не к исходному набору площадок.
     venues_with_counts = Venue.objects.annotate(
-        bookings_count=Count("bookings", filter=Q(bookings__is_cancelled=False)),
+        bookings_count=Count("bookings", filter=Q(bookings__status=Booking.Status.ACTIVE)),
     )
     by_venue = (
         venues_with_counts.annotate(venue_name=F("name"))
@@ -187,7 +193,8 @@ def statistics(request):
     )
 
     context = {
-        "active_bookings_count": active_bookings_count,
+        "active_bookings_count": status_counts["active_bookings"],
+        "status_counts": status_counts,
         "summary": summary,
         "by_venue": by_venue,
         "by_organizer": by_organizer,

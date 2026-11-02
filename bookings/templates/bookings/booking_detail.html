@@ -21,7 +21,7 @@
 
             <p class="card-text">
                 <strong>Площадка:</strong>
-                <a href="{% url 'venues:detail' booking.venue.pk %}">
+                <a href="{{ booking.venue.get_absolute_url }}">
                     {{ booking.venue.name }}
                 </a>
             </p>

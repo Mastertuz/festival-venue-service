@@ -7,5 +7,7 @@ app_name = "venues"
 urlpatterns = [
     path("", views.venues, name="list"),
     path("available/", views.available, name="available"),
-    path("<int:venue_id>/", views.venue_detail, name="detail"),
+    # Старый адрес с числовым идентификатором перенаправляется на страницу со slug.
+    path("<int:venue_id>/", views.venue_redirect, name="detail_by_id"),
+    path("<slug:slug>/", views.venue_detail, name="detail"),
 ]
