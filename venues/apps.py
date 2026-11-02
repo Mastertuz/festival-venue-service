@@ -4,6 +4,8 @@ from django.apps import AppConfig
 class VenuesConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "venues"
+    # Название приложения в административной панели.
+    verbose_name = "Площадки"
 
     def ready(self):
         # Подключает регистрацию SQLite-функции UNICODE_LOWER для поиска без учёта регистра.
