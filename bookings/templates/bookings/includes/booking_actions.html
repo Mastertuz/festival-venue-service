@@ -1,0 +1,10 @@
+{% comment %}
+    Действия с активным бронированием: переход к редактированию и отмена.
+    Шаблон получает и словарь из values(), и объект Booking: идентификатор берётся из booking.id.
+{% endcomment %}
+<a href="{% url 'bookings:update' booking.id %}" class="btn btn-sm btn-warning">Редактировать</a>
+{# Отмена изменяет данные, поэтому выполняется POST-запросом с CSRF-токеном, а не ссылкой. #}
+<form method="post" action="{% url 'bookings:cancel' booking.id %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-danger">Отменить</button>
+</form>

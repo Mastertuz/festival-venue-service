@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from bookings.models import Booking
 from festivals.models import Festival, Organizer
@@ -171,6 +172,41 @@ def booking_create(request):
         form = BookingForm(initial={"festival": upcoming})
 
     return render(request, "bookings/booking_form.html", {"form": form})
+
+
+def booking_update(request, booking_id):
+    """Редактирование бронирования: форма связывается с существующим объектом (instance)."""
+    # Изменять можно только активное бронирование: отменённые и завершённые недоступны даже
+    # при прямом обращении по адресу. Если записи нет, get_object_or_404() вернёт ответ 404.
+    booking = get_object_or_404(Booking.objects.active(), pk=booking_id)
+
+    if request.method == "POST":
+        # instance говорит форме, какой объект менять: save() обновит запись, а не создаст новую.
+        # Правило занятости площадки исключает саму редактируемую запись (exclude(pk=self.pk)
+        # в Booking.clean()), поэтому сохранение без изменений не считается конфликтом.
+        form = BookingForm(request.POST, instance=booking)
+        if form.is_valid() and save_booking_form(form):
+            messages.success(request, "Изменения сохранены.")
+            return redirect("bookings:list")
+    else:
+        # Поля формы заполняются текущими значениями бронирования.
+        form = BookingForm(instance=booking)
+
+    return render(request, "bookings/booking_form.html", {"form": form, "booking": booking})
+
+
+@require_POST
+def booking_cancel(request, booking_id):
+    """Отмена бронирования: меняет статус, запись остаётся в базе данных.
+
+    Операция изменяет данные, поэтому доступна только методом POST (GET даёт ответ 405)
+    и защищена CSRF-токеном формы.
+    """
+    # Отменить можно только активное бронирование; повторная отмена даёт ответ 404.
+    booking = get_object_or_404(Booking.objects.active(), pk=booking_id)
+    booking.cancel()
+    messages.success(request, f"Бронирование №{booking.pk} отменено.")
+    return redirect("bookings:list")
 
 
 def booking_detail(request, booking_id):

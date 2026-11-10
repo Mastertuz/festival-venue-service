@@ -38,10 +38,12 @@
         </div>
     </div>
 
-    <a
-        href="{% url 'bookings:list' %}"
-        class="btn btn-outline-secondary mt-3"
-    >
-        ← к списку бронирований
-    </a>
+    <div class="d-flex align-items-center gap-2 mt-3">
+        <a href="{% url 'bookings:list' %}" class="btn btn-outline-secondary">
+            ← к списку бронирований
+        </a>
+        {% if booking.status == "active" %}
+            {% include "bookings/includes/booking_actions.html" %}
+        {% endif %}
+    </div>
 {% endblock %}

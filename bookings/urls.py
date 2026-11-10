@@ -10,4 +10,6 @@ urlpatterns = [
     # Статические адреса стоят до маршрутов с <int:...>, чтобы не пересекаться с ними.
     path("create/", views.booking_create, name="create"),
     path("<int:booking_id>/", views.booking_detail, name="detail"),
+    path("<int:booking_id>/edit/", views.booking_update, name="update"),
+    path("<int:booking_id>/cancel/", views.booking_cancel, name="cancel"),
 ]

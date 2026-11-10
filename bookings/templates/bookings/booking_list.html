@@ -63,7 +63,13 @@
                     {{ booking.festival_name }} → {{ booking.venue_name }},
                     {{ booking.booking_date|date:"d.m.Y" }}
                 </a>
-                {% include "bookings/includes/booking_status.html" %}
+                <div class="d-flex align-items-center gap-2">
+                    {% include "bookings/includes/booking_status.html" %}
+                    {# Изменять и отменять можно только активные бронирования. #}
+                    {% if booking.status == "active" %}
+                        {% include "bookings/includes/booking_actions.html" %}
+                    {% endif %}
+                </div>
             </li>
         {% empty %}
             <li class="list-group-item">
