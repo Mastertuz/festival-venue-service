@@ -171,8 +171,11 @@ def test_invalid_venue_and_organizer_are_reported_and_ignored(many):
             assert response.context["total_count"] == 8
 
 
-def test_filter_by_unknown_identifier_gives_empty_result(many):
-    assert get({"venue": 999999}).context["total_count"] == 0
+def test_filter_by_unknown_identifier_is_rejected_by_the_form(many):
+    # ModelChoiceField принимает только существующие объекты: фильтрация не выполняется.
+    response = get({"venue": 999999})
+    assert "Выберите площадку из списка." in squashed(response)
+    assert response.context["total_count"] == 8
 
 
 # --- поиск -------------------------------------------------------------------

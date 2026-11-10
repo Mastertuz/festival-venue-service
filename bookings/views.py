@@ -4,9 +4,10 @@ from django.shortcuts import get_object_or_404, render
 
 from bookings.models import Booking
 from festivals.models import Organizer
-from venue_service.params import parse_iso_date, parse_non_negative_int
 from venue_service.search import search_text
 from venues.models import Venue
+
+from .forms import BookingFilterForm
 
 # Площадка считается «часто бронируемой», если у неё больше стольких активных бронирований.
 POPULAR_THRESHOLD = 2
@@ -29,14 +30,33 @@ SEARCH_FIELDS = ["festival__name", "venue__name", "festival__organizer__name"]
 
 
 def bookings(request):
-    only_active = request.GET.get("active") == "1"
-    raw_date = request.GET.get("date", "").strip()
-    raw_venue = request.GET.get("venue", "").strip()
-    raw_organizer = request.GET.get("organizer", "").strip()
-    query = request.GET.get("q", "").strip()
-    sort = request.GET.get("sort", DEFAULT_SORT)
-    descending = request.GET.get("dir") == "desc"
-    errors = []
+    # Форма проверяет GET-параметры. Без параметров она не связана с данными (is_bound == False),
+    # и страница открывается со всеми бронированиями и сортировкой по умолчанию.
+    form = BookingFilterForm(request.GET or None)
+    form_valid = form.is_bound and form.is_valid()
+
+    # Значения по умолчанию: пока форма не прошла проверку, ей не доверяют и не фильтруют.
+    only_active = False
+    selected_date = None
+    selected_venue = None
+    selected_organizer = None
+    query = ""
+    sort = DEFAULT_SORT
+    descending = False
+    error = None
+
+    # cleaned_data доступен только после успешного is_valid(): значения уже преобразованы
+    # (дата — в date, площадка и организатор — в объекты моделей).
+    if form_valid:
+        only_active = form.cleaned_data["active"]
+        selected_date = form.cleaned_data["date"]
+        selected_venue = form.cleaned_data["venue"]
+        selected_organizer = form.cleaned_data["organizer"]
+        query = form.cleaned_data["q"]
+        sort = form.cleaned_data["sort"] or DEFAULT_SORT
+        descending = form.cleaned_data["dir"] == "desc"
+    elif form.is_bound:
+        error = "Проверьте введённые значения фильтров."
 
     # Все бронирования; порядок по умолчанию (по дате фестиваля) задан в Meta модели.
     bookings_data = Booking.objects.all()
@@ -46,32 +66,22 @@ def bookings(request):
         bookings_data = bookings_data.active()
 
     # Фильтр по дате: условие по полю связанной модели (дата проведения фестиваля).
-    selected_date, date_error = parse_iso_date(raw_date)
-    if date_error:
-        errors.append("Укажите корректную дату.")
-    elif selected_date is not None:
+    if selected_date:
         bookings_data = bookings_data.filter(festival__date=selected_date)
 
     # Фильтр по площадке (по внешнему ключу) и по организатору (через фестиваль).
-    venue_id, venue_error = parse_non_negative_int(raw_venue)
-    if venue_error:
-        errors.append("Выберите площадку из списка.")
-    elif venue_id is not None:
-        bookings_data = bookings_data.filter(venue_id=venue_id)
+    if selected_venue:
+        bookings_data = bookings_data.filter(venue=selected_venue)
 
-    organizer_id, organizer_error = parse_non_negative_int(raw_organizer)
-    if organizer_error:
-        errors.append("Выберите организатора из списка.")
-    elif organizer_id is not None:
-        bookings_data = bookings_data.filter(festival__organizer_id=organizer_id)
+    if selected_organizer:
+        bookings_data = bookings_data.filter(festival__organizer=selected_organizer)
 
     # Поиск по нескольким полям: фестиваль, площадка, организатор.
     bookings_data = search_text(bookings_data, SEARCH_FIELDS, query)
 
-    # Сортировка по выбранному полю из заранее заданного соответствия; при равенстве значений
-    # порядок определяет идентификатор. Префикс «-» меняет направление.
-    if sort not in SORT_FIELDS:
-        sort = DEFAULT_SORT
+    # Сортировка по выбранному полю из заранее заданного соответствия (форма уже отклонила
+    # значения не из списка); при равенстве значений порядок определяет идентификатор.
+    # Префикс «-» меняет направление.
     sort_fields = [SORT_FIELDS[sort], "pk"]
     if descending:
         sort_fields = [f"-{field}" for field in sort_fields]
@@ -104,16 +114,12 @@ def bookings(request):
         "bookings": page_obj,
         "page_obj": page_obj,
         "total_count": paginator.count,
+        "form": form,
         "only_active": only_active,
-        "raw_date": raw_date,
-        "selected_venue": raw_venue,
-        "selected_organizer": raw_organizer,
         "query": query,
         "sort": sort,
         "descending": descending,
-        "venues": Venue.objects.order_by("name"),
-        "organizers": Organizer.objects.order_by("name"),
-        "errors": errors,
+        "error": error,
     }
 
     return render(
