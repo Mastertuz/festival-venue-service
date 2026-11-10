@@ -36,3 +36,13 @@ main {
     color: #6c757d;
     border-top: 1px solid #ddd;
 }
+
+.venue-photo {
+    max-height: 320px;
+    object-fit: cover;
+}
+
+.venue-card-photo {
+    max-height: 180px;
+    object-fit: cover;
+}

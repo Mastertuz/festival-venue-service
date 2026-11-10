@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if venue %}Редактирование площадки{% else %}Добавление площадки{% endif %} – {{ site_name }}
+{% endblock %}
+
+{% block content %}
+    {% if venue %}
+        <h1>Редактирование площадки «{{ venue.name }}»</h1>
+    {% else %}
+        <h1>Добавление площадки</h1>
+    {% endif %}
+
+    {# enctype="multipart/form-data" нужен для передачи файла; без него браузер отправит только имя. #}
+    <form method="post" enctype="multipart/form-data" class="mb-3">
+        {% csrf_token %}
+
+        {% for error in form.non_field_errors %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endfor %}
+
+        {% for field in form %}
+            <div class="mb-3">
+                {% include "includes/field.html" with field=field %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">
+            {% if venue %}Сохранить изменения{% else %}Добавить площадку{% endif %}
+        </button>
+        <a href="{% if venue %}{{ venue.get_absolute_url }}{% else %}{% url 'venues:list' %}{% endif %}"
+           class="btn btn-outline-secondary">Назад</a>
+    </form>
+{% endblock %}

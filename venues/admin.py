@@ -32,6 +32,7 @@ class VenueAdmin(admin.ModelAdmin):
         "name",
         "capacity",
         "is_large",
+        "has_image",
         "active_bookings_count",
         "site_link",
     )
@@ -44,7 +45,9 @@ class VenueAdmin(admin.ModelAdmin):
     list_per_page = 20
 
     # id и slug присваиваются автоматически, is_large вычисляет база данных.
-    readonly_fields = ("id", "slug", "is_large")
+    # image_preview показывает загруженное изображение; сам файл меняется полем «Изображение»
+    # (ImageField в админ-панели получает кнопку выбора файла).
+    readonly_fields = ("id", "slug", "is_large", "image_preview")
     inlines = (VenueBookingInline,)
 
     # Ссылка «Смотреть на сайте» строится по Venue.get_absolute_url().
@@ -64,6 +67,20 @@ class VenueAdmin(admin.ModelAdmin):
     @admin.display(description="Активных бронирований", ordering="active_bookings")
     def active_bookings_count(self, obj):
         return obj.active_bookings
+
+    @admin.display(description="Есть изображение", boolean=True)
+    def has_image(self, obj):
+        return bool(obj.image)
+
+    @admin.display(description="Предпросмотр изображения")
+    def image_preview(self, obj):
+        if obj and obj.image:
+            return format_html(
+                '<img src="{}" alt="{}" style="max-height: 160px; border-radius: 6px;">',
+                obj.image.url,
+                obj.name,
+            )
+        return "Изображение не загружено"
 
     @admin.display(description="Страница на сайте")
     def site_link(self, obj):

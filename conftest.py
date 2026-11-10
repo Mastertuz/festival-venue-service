@@ -56,3 +56,10 @@ def orm_data(db):
         "active": active,
         "cancelled": cancelled,
     }
+
+
+@pytest.fixture
+def media_root(settings, tmp_path):
+    """Временный каталог медиафайлов: загруженные в тестах изображения не попадают в media/."""
+    settings.MEDIA_ROOT = tmp_path / "media"
+    return settings.MEDIA_ROOT

@@ -67,7 +67,7 @@ def test_venue_admin_settings():
     assert venue_admin.search_fields == ("name",)
     assert venue_admin.ordering == ("name",)
     assert venue_admin.list_per_page == 20
-    assert set(venue_admin.readonly_fields) == {"id", "slug", "is_large"}
+    assert set(venue_admin.readonly_fields) == {"id", "slug", "is_large", "image_preview"}
     assert venue_admin.view_on_site is True
     assert venue_admin.inlines
 

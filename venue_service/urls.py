@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.conf import settings  # type: ignore[import-untyped]
+from django.conf.urls.static import static  # type: ignore[import-untyped]
 from django.contrib import admin  # type: ignore[import-untyped]
 from django.urls import include, path  # type: ignore[import-untyped]
 
@@ -25,6 +26,11 @@ urlpatterns = [
     path("venues/", include("venues.urls")),
     path("bookings/", include("bookings.urls")),
 ]
+
+# В режиме разработки загруженные файлы раздаёт сервер Django; в рабочей среде медиафайлы
+# отдаёт веб-сервер или файловое хранилище.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if "debug_toolbar" in settings.INSTALLED_APPS:
     urlpatterns.append(path("__debug__/", include("debug_toolbar.urls")))

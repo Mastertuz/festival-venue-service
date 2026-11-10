@@ -9,6 +9,17 @@
                 {{ venue.name }}
             </h1>
 
+            {% if venue.image %}
+                {# Изображение загружено: адрес файла формирует Django из MEDIA_URL и пути в поле. #}
+                <img
+                    src="{{ venue.image.url }}"
+                    alt="{{ venue.name }}"
+                    class="img-fluid rounded venue-photo mb-3"
+                >
+            {% else %}
+                <p class="text-muted">Изображение не загружено.</p>
+            {% endif %}
+
             <p class="card-text">
                 <strong>ID:</strong> {{ venue.id }}
             </p>
@@ -43,10 +54,12 @@
         </div>
     </div>
 
-    <a
-        href="{% url 'venues:list' %}"
-        class="btn btn-outline-secondary mt-3"
-    >
-        ← к списку площадок
-    </a>
+    <div class="d-flex gap-2 mt-3">
+        <a href="{% url 'venues:list' %}" class="btn btn-outline-secondary">
+            ← к списку площадок
+        </a>
+        <a href="{% url 'venues:update' venue.slug %}" class="btn btn-warning">
+            Редактировать площадку
+        </a>
+    </div>
 {% endblock %}

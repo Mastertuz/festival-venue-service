@@ -1,11 +1,15 @@
 from datetime import date
 
+from django.contrib import messages
+from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404, redirect, render
 
 from bookings.models import Booking
 from venue_service.params import parse_iso_date, parse_non_negative_int
 from venue_service.search import search_text
 from venues.models import Venue
+
+from .forms import VenueForm
 
 UPCOMING_BOOKINGS_LIMIT = 5
 
@@ -37,6 +41,41 @@ def venues(request):
         "venues/venue_list.html",
         context,
     )
+
+
+def venue_create(request):
+    """Добавление площадки: GET показывает пустую форму, POST проверяет данные и файл."""
+    if request.method == "POST":
+        # Помимо полей формы в неё передаются загруженные файлы (request.FILES).
+        form = VenueForm(request.POST, request.FILES)
+        if form.is_valid():
+            venue = form.save()
+            messages.success(request, "Площадка добавлена.")
+            return redirect(venue)
+    else:
+        form = VenueForm()
+
+    return render(request, "venues/venue_form.html", {"form": form})
+
+
+def venue_update(request, slug):
+    """Редактирование площадки, в том числе замена или удаление изображения."""
+    venue = get_object_or_404(Venue, slug=slug)
+    old_image = venue.image.name
+
+    if request.method == "POST":
+        form = VenueForm(request.POST, request.FILES, instance=venue)
+        if form.is_valid():
+            venue = form.save()
+            # Django не удаляет заменённый файл сам: убираем его, чтобы не копить лишние файлы.
+            if old_image and venue.image.name != old_image:
+                default_storage.delete(old_image)
+            messages.success(request, "Изменения сохранены.")
+            return redirect(venue)
+    else:
+        form = VenueForm(instance=venue)
+
+    return render(request, "venues/venue_form.html", {"form": form, "venue": venue})
 
 
 def venue_redirect(request, venue_id):

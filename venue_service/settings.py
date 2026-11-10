@@ -140,6 +140,11 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Медиафайлы — файлы, загруженные пользователями (изображения площадок). Они хранятся отдельно
+# от статических файлов приложения и не входят в репозиторий (каталог media/ в .gitignore).
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

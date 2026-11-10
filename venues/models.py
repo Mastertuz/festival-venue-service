@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.utils.text import slugify
 from unidecode import unidecode
 
+from .validators import validate_image_size
+
 # Площадка считается большой при вместимости не менее этого значения (учебный порог).
 LARGE_VENUE_CAPACITY = 3000
 
@@ -44,6 +46,19 @@ class Venue(models.Model):
         unique=True,
         editable=False,
         verbose_name="URL-идентификатор",
+    )
+
+    # Фотография площадки. Файл сохраняется в MEDIA_ROOT/venues/, в базе данных хранится только
+    # путь к нему. ImageField проверяет, что загружено настоящее изображение (нужен Pillow),
+    # а validate_image_size ограничивает размер файла. blank=True и null=True позволяют
+    # создавать площадки без изображения.
+    image = models.ImageField(
+        upload_to="venues/",
+        blank=True,
+        null=True,
+        validators=[validate_image_size],
+        verbose_name="Изображение",
+        help_text="Фотография площадки: изображение не более 2 МБ.",
     )
 
     def __str__(self):
