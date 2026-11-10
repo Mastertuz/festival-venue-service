@@ -1,6 +1,8 @@
 from django import forms
+from django.utils import timezone
 
-from festivals.models import Organizer
+from bookings.models import Booking
+from festivals.models import Festival, Organizer
 from venues.models import Venue
 
 # Допустимые значения параметра sort и подписи для списка выбора. Соответствие значений полям
@@ -83,3 +85,54 @@ class BookingFilterForm(forms.Form):
         label="Только активные",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
+
+class BookingForm(forms.ModelForm):
+    """Форма создания и редактирования бронирования (ModelForm: поля берутся из модели).
+
+    Пользователь выбирает фестиваль и площадку. Дата бронирования равна дате проведения
+    фестиваля, поэтому отдельного поля даты нет. Статус в форму не входит: новое бронирование
+    получает значение по умолчанию (активно), а менять статус можно только отдельной операцией
+    (отмена). Правило «одна площадка — одно активное бронирование на дату» проверяет
+    Booking.clean(): ModelForm вызывает его при is_valid(), и ошибка попадает в общие ошибки
+    формы (non_field_errors).
+    """
+
+    class Meta:
+        model = Booking
+        # Поля перечислены явно: fields = "__all__" открыл бы и служебный статус.
+        fields = ["festival", "venue"]
+        labels = {
+            "festival": "Фестиваль",
+            "venue": "Площадка",
+        }
+        help_texts = {
+            "festival": "Дата бронирования равна дате проведения фестиваля.",
+            "venue": "На эту дату у площадки не должно быть другого активного бронирования.",
+        }
+        widgets = {
+            "festival": forms.Select(attrs={"class": "form-select"}),
+            "venue": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # В списках выбора показываются дата фестиваля и вместимость площадки.
+        self.fields["festival"].queryset = Festival.objects.order_by("date", "pk")
+        self.fields["festival"].label_from_instance = lambda festival: (
+            f"{festival.name} — {festival.date:%d.%m.%Y}"
+        )
+        self.fields["venue"].queryset = Venue.objects.order_by("name")
+        self.fields["venue"].label_from_instance = lambda venue: (
+            f"{venue.name} ({venue.capacity} мест)"
+        )
+
+    def clean_festival(self):
+        """Проверка отдельного поля: нельзя бронировать площадку на прошедшую дату."""
+        festival = self.cleaned_data["festival"]
+        # Сегодняшняя дата разрешена; текущую дату берём с учётом часового пояса проекта.
+        if festival.date < timezone.localdate():
+            raise forms.ValidationError(
+                "Нельзя создать бронирование на прошедшую дату: фестиваль уже состоялся."
+            )
+        return festival

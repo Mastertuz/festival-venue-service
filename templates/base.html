@@ -26,6 +26,15 @@
     </header>
 
     <main class="container">
+        {# Одноразовые сообщения (django.contrib.messages): результат создания, правки, отмены. #}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.level_tag|default:'info' }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>

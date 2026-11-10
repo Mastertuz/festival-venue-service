@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if booking %}Редактирование бронирования №{{ booking.pk }}{% else %}Создание бронирования{% endif %}
+    – {{ site_name }}
+{% endblock %}
+
+{% block content %}
+    {# Один шаблон обслуживает создание и редактирование: объект booking есть только при правке. #}
+    {% if booking %}
+        <h1>Редактирование бронирования №{{ booking.pk }}</h1>
+    {% else %}
+        <h1>Создание бронирования</h1>
+    {% endif %}
+
+    {# Форма отправляет данные методом POST; без CSRF-токена Django отклонит запрос (ответ 403). #}
+    <form method="post" class="mb-3">
+        {% csrf_token %}
+
+        {# Общие ошибки формы, не связанные с одним полем (например, площадка уже занята). #}
+        {% for error in form.non_field_errors %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endfor %}
+
+        {% for field in form %}
+            <div class="mb-3">
+                {% include "includes/field.html" with field=field %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">
+            {% if booking %}Сохранить изменения{% else %}Создать бронирование{% endif %}
+        </button>
+        <a href="{% url 'bookings:list' %}" class="btn btn-outline-secondary">Назад к списку</a>
+    </form>
+{% endblock %}

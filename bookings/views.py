@@ -1,13 +1,16 @@
+from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, F, Max, Min, Q, Sum
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from bookings.models import Booking
-from festivals.models import Organizer
+from festivals.models import Festival, Organizer
 from venue_service.search import search_text
 from venues.models import Venue
 
-from .forms import BookingFilterForm
+from .forms import BookingFilterForm, BookingForm
 
 # Площадка считается «часто бронируемой», если у неё больше стольких активных бронирований.
 POPULAR_THRESHOLD = 2
@@ -24,6 +27,9 @@ SORT_FIELDS = {
     "organizer": "festival__organizer__name",
 }
 DEFAULT_SORT = "date"
+
+# Часть сообщения триггеров базы данных (ПР10), по которой отличают конфликт бронирований.
+CONFLICT_TEXT = "Площадка уже забронирована"
 
 # Поля, по которым ищется текст из параметра q (в том числе поля связанных моделей).
 SEARCH_FIELDS = ["festival__name", "venue__name", "festival__organizer__name"]
@@ -127,6 +133,44 @@ def bookings(request):
         "bookings/booking_list.html",
         context,
     )
+
+
+def save_booking_form(form):
+    """Сохранить проверенную форму; вернуть True или добавить ошибку формы при конфликте.
+
+    Booking.clean() уже проверил занятость площадки при is_valid(), но между проверкой и
+    записью другой запрос мог занять ту же площадку на ту же дату. Тогда запись отклоняют
+    триггеры базы данных (ПР10), а Django превращает отказ в IntegrityError. Пользователь
+    получает ошибку формы, а не страницу 500.
+    """
+    try:
+        # atomic() откатывает неудачную запись, не нарушая транзакцию запроса.
+        with transaction.atomic():
+            form.save()
+    except IntegrityError as error:
+        if CONFLICT_TEXT not in str(error):
+            raise
+        form.add_error(None, "Площадка уже забронирована на эту дату: есть активное бронирование.")
+        return False
+    return True
+
+
+def booking_create(request):
+    """Создание бронирования: GET показывает пустую форму, POST проверяет и сохраняет данные."""
+    if request.method == "POST":
+        # Форма связывается с данными запроса; данные не сохраняются до успешной проверки.
+        form = BookingForm(request.POST)
+        if form.is_valid() and save_booking_form(form):
+            messages.success(request, "Бронирование создано.")
+            # После успешного POST выполняется перенаправление (Post/Redirect/Get):
+            # обновление страницы не отправит форму повторно.
+            return redirect("bookings:list")
+    else:
+        # Начальное значение: ближайший фестиваль, который ещё не прошёл (если он есть).
+        upcoming = Festival.objects.filter(date__gte=timezone.localdate()).first()
+        form = BookingForm(initial={"festival": upcoming})
+
+    return render(request, "bookings/booking_form.html", {"form": form})
 
 
 def booking_detail(request, booking_id):
