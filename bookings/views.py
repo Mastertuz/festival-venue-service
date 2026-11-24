@@ -1,23 +1,21 @@
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.views.generic import DetailView, ListView
 
 from bookings.models import Booking
 from festivals.models import Festival, Organizer
 from venue_service.search import search_text
+from venue_service.utils import DataMixin
 from venues.models import Venue
 
 from .forms import BookingFilterForm, BookingForm
 
 # Площадка считается «часто бронируемой», если у неё больше стольких активных бронирований.
 POPULAR_THRESHOLD = 2
-
-# Количество бронирований на одной странице списка.
-BOOKINGS_PER_PAGE = 5
 
 # Допустимые значения параметра sort и соответствующие им поля модели. Произвольное значение
 # из URL в order_by() не передаётся: неизвестный параметр заменяется сортировкой по дате.
@@ -36,104 +34,115 @@ CONFLICT_TEXT = "Площадка уже забронирована"
 SEARCH_FIELDS = ["festival__name", "venue__name", "festival__organizer__name"]
 
 
-def bookings(request):
-    # Форма проверяет GET-параметры. Без параметров она не связана с данными (is_bound == False),
-    # и страница открывается со всеми бронированиями и сортировкой по умолчанию.
-    form = BookingFilterForm(request.GET or None)
-    form_valid = form.is_bound and form.is_valid()
+class BookingListView(DataMixin, ListView):
+    """Список бронирований: поиск, фильтры, сортировка и постраничный вывод.
 
-    # Значения по умолчанию: пока форма не прошла проверку, ей не доверяют и не фильтруют.
-    only_active = False
-    selected_date = None
-    selected_venue = None
-    selected_organizer = None
-    query = ""
-    sort = DEFAULT_SORT
-    descending = False
-    error = None
+    Параметры фильтрации проверяет форма BookingFilterForm. Пагинацию включает ListView:
+    число записей на странице (paginate_by) берётся из примеси DataMixin, номер страницы
+    ListView получает из GET-параметра page сам.
+    """
 
-    # cleaned_data доступен только после успешного is_valid(): значения уже преобразованы
-    # (дата — в date, площадка и организатор — в объекты моделей).
-    if form_valid:
-        only_active = form.cleaned_data["active"]
-        selected_date = form.cleaned_data["date"]
-        selected_venue = form.cleaned_data["venue"]
-        selected_organizer = form.cleaned_data["organizer"]
-        query = form.cleaned_data["q"]
-        sort = form.cleaned_data["sort"] or DEFAULT_SORT
-        descending = form.cleaned_data["dir"] == "desc"
-    elif form.is_bound:
-        error = "Проверьте введённые значения фильтров."
+    model = Booking
+    template_name = "bookings/booking_list.html"
+    context_object_name = "bookings"
+    # Заголовок страницы формирует примесь, описание — статические данные из extra_context.
+    title_page = "Бронирования"
+    extra_context = {"page_description": "Просмотр, поиск и фильтрация бронирований"}
+    # allow_empty = True (значение по умолчанию): список без результатов открывается и
+    # показывает сообщение «Бронирования не найдены», а не страницу 404.
 
-    # Все бронирования; порядок по умолчанию (по дате фестиваля) задан в Meta модели.
-    bookings_data = Booking.objects.all()
+    def get_queryset(self):
+        """Выборка бронирований с учётом проверенных параметров фильтрации и сортировки."""
+        # Форма проверяет GET-параметры. Без параметров она не связана с данными
+        # (is_bound == False), и страница открывается со всеми бронированиями.
+        self.filter_form = BookingFilterForm(self.request.GET or None)
+        self.filter_valid = self.filter_form.is_bound and self.filter_form.is_valid()
 
-    # Фильтр по статусу: только активные бронирования (метод пользовательского QuerySet).
-    if only_active:
-        bookings_data = bookings_data.active()
+        # Значения по умолчанию: пока форма не прошла проверку, ей не доверяют и не фильтруют.
+        self.only_active = False
+        self.query = ""
+        self.sort = DEFAULT_SORT
+        self.descending = False
+        selected_date = None
+        selected_venue = None
+        selected_organizer = None
 
-    # Фильтр по дате: условие по полю связанной модели (дата проведения фестиваля).
-    if selected_date:
-        bookings_data = bookings_data.filter(festival__date=selected_date)
+        # cleaned_data доступен только после успешного is_valid(): значения уже преобразованы
+        # (дата — в date, площадка и организатор — в объекты моделей).
+        if self.filter_valid:
+            data = self.filter_form.cleaned_data
+            self.only_active = data["active"]
+            selected_date = data["date"]
+            selected_venue = data["venue"]
+            selected_organizer = data["organizer"]
+            self.query = data["q"]
+            self.sort = data["sort"] or DEFAULT_SORT
+            self.descending = data["dir"] == "desc"
 
-    # Фильтр по площадке (по внешнему ключу) и по организатору (через фестиваль).
-    if selected_venue:
-        bookings_data = bookings_data.filter(venue=selected_venue)
+        # Все бронирования; порядок по умолчанию (по дате фестиваля) задан в Meta модели.
+        bookings_data = Booking.objects.all()
 
-    if selected_organizer:
-        bookings_data = bookings_data.filter(festival__organizer=selected_organizer)
+        # Фильтр по статусу: только активные бронирования (метод пользовательского QuerySet).
+        if self.only_active:
+            bookings_data = bookings_data.active()
 
-    # Поиск по нескольким полям: фестиваль, площадка, организатор.
-    bookings_data = search_text(bookings_data, SEARCH_FIELDS, query)
+        # Фильтр по дате: условие по полю связанной модели (дата проведения фестиваля).
+        if selected_date:
+            bookings_data = bookings_data.filter(festival__date=selected_date)
 
-    # Сортировка по выбранному полю из заранее заданного соответствия (форма уже отклонила
-    # значения не из списка); при равенстве значений порядок определяет идентификатор.
-    # Префикс «-» меняет направление.
-    sort_fields = [SORT_FIELDS[sort], "pk"]
-    if descending:
-        sort_fields = [f"-{field}" for field in sort_fields]
-    bookings_data = bookings_data.order_by(*sort_fields)
+        # Фильтр по площадке (по внешнему ключу) и по организатору (через фестиваль).
+        if selected_venue:
+            bookings_data = bookings_data.filter(venue=selected_venue)
+        if selected_organizer:
+            bookings_data = bookings_data.filter(festival__organizer=selected_organizer)
 
-    # Поля связанных моделей через F(): названия берутся через внешние ключи без ручного JOIN;
-    # values() возвращает словари с нужными ключами.
-    bookings_data = bookings_data.annotate(
-        festival_name=F("festival__name"),
-        booking_date=F("festival__date"),
-        venue_name=F("venue__name"),
-        capacity=F("venue__capacity"),
-        organizer_name=F("festival__organizer__name"),
-    ).values(
-        "id",
-        "festival_name",
-        "booking_date",
-        "venue_name",
-        "capacity",
-        "organizer_name",
-        "status",
-    )
+        # Поиск по нескольким полям: фестиваль, площадка, организатор.
+        bookings_data = search_text(bookings_data, SEARCH_FIELDS, self.query)
 
-    # Пагинация применяется после фильтрации и сортировки. get_page() при некорректном номере
-    # возвращает первую страницу, а при слишком большом — последнюю.
-    paginator = Paginator(bookings_data, BOOKINGS_PER_PAGE)
-    page_obj = paginator.get_page(request.GET.get("page"))
+        # Сортировка по выбранному полю из заранее заданного соответствия (форма уже отклонила
+        # значения не из списка); при равенстве значений порядок определяет идентификатор.
+        # Префикс «-» меняет направление.
+        sort_fields = [SORT_FIELDS[self.sort], "pk"]
+        if self.descending:
+            sort_fields = [f"-{field}" for field in sort_fields]
+        bookings_data = bookings_data.order_by(*sort_fields)
 
-    context = {
-        "bookings": page_obj,
-        "page_obj": page_obj,
-        "total_count": paginator.count,
-        "form": form,
-        "only_active": only_active,
-        "query": query,
-        "sort": sort,
-        "descending": descending,
-        "error": error,
-    }
+        # Поля связанных моделей через F(): названия берутся через внешние ключи без ручного
+        # JOIN; values() возвращает словари с нужными ключами.
+        return bookings_data.annotate(
+            festival_name=F("festival__name"),
+            booking_date=F("festival__date"),
+            venue_name=F("venue__name"),
+            capacity=F("venue__capacity"),
+            organizer_name=F("festival__organizer__name"),
+        ).values(
+            "id",
+            "festival_name",
+            "booking_date",
+            "venue_name",
+            "capacity",
+            "organizer_name",
+            "status",
+        )
 
-    return render(
-        request,
-        "bookings/booking_list.html",
-        context,
-    )
+    def get_context_data(self, **kwargs):
+        """Дополняет контекст ListView формой фильтрации и динамическими значениями."""
+        # Стандартный контекст ListView: bookings, page_obj, paginator, is_paginated.
+        context = super().get_context_data(**kwargs)
+        context["form"] = self.filter_form
+        context["only_active"] = self.only_active
+        context["query"] = self.query
+        context["sort"] = self.sort
+        context["descending"] = self.descending
+        # Общее число записей с учётом фильтров (не только текущей страницы): его считает
+        # пагинатор, поэтому лишнего запроса к базе данных не требуется.
+        context["total_count"] = context["paginator"].count
+        context["error"] = (
+            "Проверьте введённые значения фильтров."
+            if self.filter_form.is_bound and not self.filter_valid
+            else None
+        )
+        return context
 
 
 def save_booking_form(form):
@@ -209,23 +218,24 @@ def booking_cancel(request, booking_id):
     return redirect("bookings:list")
 
 
-def booking_detail(request, booking_id):
-    # Бронирование вместе с фестивалем, организатором и площадкой одним запросом
-    # (select_related); при отсутствии записи get_object_or_404() вернёт ответ 404.
-    booking = get_object_or_404(
-        Booking.objects.select_related("festival__organizer", "venue"),
-        pk=booking_id,
-    )
+class BookingDetailView(DataMixin, DetailView):
+    """Карточка бронирования: объект выбирается по первичному ключу из адреса."""
 
-    context = {
-        "booking": booking,
-    }
+    model = Booking
+    template_name = "bookings/booking_detail.html"
+    context_object_name = "booking"
+    # Параметр маршрута называется booking_id, а не pk (стандартное имя).
+    pk_url_kwarg = "booking_id"
+    title_page = "Бронирование"
 
-    return render(
-        request,
-        "bookings/booking_detail.html",
-        context,
-    )
+    def get_queryset(self):
+        """Бронирование вместе с фестивалем, организатором и площадкой одним запросом."""
+        return Booking.objects.select_related("festival__organizer", "venue")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Заголовок страницы с номером бронирования (динамическое значение).
+        return self.get_mixin_context(context, title=f"Бронирование №{self.object.pk}")
 
 
 def statistics(request):

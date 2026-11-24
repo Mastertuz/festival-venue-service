@@ -144,7 +144,7 @@ def test_form_is_bound_when_parameters_are_passed(orm_data):
 
 
 def test_only_page_parameter_is_not_a_form_error(orm_data):
-    response = get({"page": "2"})
+    response = get({"page": "1"})
     assert response.context["error"] is None
     assert response.context["form"].is_valid()
 

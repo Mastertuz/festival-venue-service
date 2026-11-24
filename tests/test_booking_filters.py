@@ -84,12 +84,15 @@ def test_navigation_is_shown_only_for_several_pages(many, orm_data):
     assert "Навигация по страницам" not in get().content.decode()
 
 
-def test_invalid_and_out_of_range_page_numbers_do_not_break_the_page(many):
-    assert festival_names(get({"page": "abc"}))[0] == "Джаз"  # первая страница
-    assert festival_names(get({"page": 999}))[-1] == "Театр"  # последняя страница
-    assert festival_names(get({"page": 0}))[-1] == "Театр"  # номер меньше 1 — последняя страница
-    assert get({"page": "abc"}).status_code == 200
-    assert get({"page": 999}).status_code == 200
+def test_invalid_and_out_of_range_page_numbers_give_404_like_listview(many):
+    # ListView отвечает 404 на номер страницы, которого нет или который не число.
+    for value in ("abc", 999, 0, -1):
+        assert get({"page": value}).status_code == 404, value
+    # Специальное значение last открывает последнюю страницу.
+    last = get({"page": "last"})
+    assert last.status_code == 200
+    assert festival_names(last)[-1] == "Театр"
+    assert get({"page": 1}).status_code == 200
 
 
 def test_navigation_links_keep_filters_and_sorting(many):

@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Бронирования – Festival Venue Service{% endblock %}
-
 {% block content %}
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="mb-0">Бронирования</h1>
+        <h1 class="mb-0">{{ title }}</h1>
         <a href="{% url 'bookings:create' %}" class="btn btn-primary">Создать бронирование</a>
     </div>
+
+    {# Заголовок и описание страницы передаёт представление (DataMixin и extra_context). #}
+    <p class="text-muted">{{ page_description }}</p>
 
     {# Форма фильтрации: параметры отправляются GET-запросом и проверяются BookingFilterForm. #}
     {% if error %}
@@ -78,7 +79,7 @@
         {% endfor %}
     </ul>
 
-    {% if page_obj.paginator.num_pages > 1 %}
+    {% if is_paginated %}
         <nav aria-label="Навигация по страницам">
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
