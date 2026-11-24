@@ -4,7 +4,8 @@ from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from django.views.generic import DetailView, ListView
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from bookings.models import Booking
 from festivals.models import Festival, Organizer
@@ -165,43 +166,65 @@ def save_booking_form(form):
     return True
 
 
-def booking_create(request):
-    """Создание бронирования: GET показывает пустую форму, POST проверяет и сохраняет данные."""
-    if request.method == "POST":
-        # Форма связывается с данными запроса; данные не сохраняются до успешной проверки.
-        form = BookingForm(request.POST)
-        if form.is_valid() and save_booking_form(form):
-            messages.success(request, "Бронирование создано.")
-            # После успешного POST выполняется перенаправление (Post/Redirect/Get):
-            # обновление страницы не отправит форму повторно.
-            return redirect("bookings:list")
-    else:
-        # Начальное значение: ближайший фестиваль, который ещё не прошёл (если он есть).
-        upcoming = Festival.objects.filter(date__gte=timezone.localdate()).first()
-        form = BookingForm(initial={"festival": upcoming})
+class BookingSaveMixin:
+    """Сохранение формы бронирования для CreateView и UpdateView (общая часть).
 
-    return render(request, "bookings/booking_form.html", {"form": form})
+    Занятость площадки уже проверена при is_valid() в Booking.clean(). Здесь запись защищена
+    от конкурентных запросов: конфликт, который отклонил триггер базы данных, становится
+    ошибкой формы, а не страницей 500. Сообщение об успехе задаёт success_message класса.
+    """
+
+    success_url = reverse_lazy("bookings:list")
+    success_message = ""
+
+    def form_valid(self, form):
+        if not save_booking_form(form):
+            # Форма с добавленной общей ошибкой показывается повторно, объект не сохранён.
+            return self.form_invalid(form)
+        self.object = form.instance
+        messages.success(self.request, self.success_message)
+        # После успешного POST выполняется перенаправление (Post/Redirect/Get).
+        return redirect(self.get_success_url())
 
 
-def booking_update(request, booking_id):
+class BookingCreateView(DataMixin, BookingSaveMixin, CreateView):
+    """Создание бронирования: GET показывает пустую форму, POST проверяет и сохраняет."""
+
+    model = Booking
+    form_class = BookingForm
+    template_name = "bookings/booking_form.html"
+    title_page = "Создание бронирования"
+    success_message = "Бронирование создано."
+
+    def get_initial(self):
+        """Начальное значение формы: ближайший фестиваль, который ещё не прошёл."""
+        initial = super().get_initial()
+        initial["festival"] = Festival.objects.filter(date__gte=timezone.localdate()).first()
+        return initial
+
+
+class BookingUpdateView(DataMixin, BookingSaveMixin, UpdateView):
     """Редактирование бронирования: форма связывается с существующим объектом (instance)."""
-    # Изменять можно только активное бронирование: отменённые и завершённые недоступны даже
-    # при прямом обращении по адресу. Если записи нет, get_object_or_404() вернёт ответ 404.
-    booking = get_object_or_404(Booking.objects.active(), pk=booking_id)
 
-    if request.method == "POST":
-        # instance говорит форме, какой объект менять: save() обновит запись, а не создаст новую.
-        # Правило занятости площадки исключает саму редактируемую запись (exclude(pk=self.pk)
-        # в Booking.clean()), поэтому сохранение без изменений не считается конфликтом.
-        form = BookingForm(request.POST, instance=booking)
-        if form.is_valid() and save_booking_form(form):
-            messages.success(request, "Изменения сохранены.")
-            return redirect("bookings:list")
-    else:
-        # Поля формы заполняются текущими значениями бронирования.
-        form = BookingForm(instance=booking)
+    model = Booking
+    form_class = BookingForm
+    template_name = "bookings/booking_form.html"
+    context_object_name = "booking"
+    # Параметр маршрута называется booking_id, а не pk (стандартное имя).
+    pk_url_kwarg = "booking_id"
+    title_page = "Редактирование бронирования"
+    success_message = "Изменения сохранены."
 
-    return render(request, "bookings/booking_form.html", {"form": form, "booking": booking})
+    def get_queryset(self):
+        """Изменять можно только активные бронирования: остальные дают ответ 404."""
+        return Booking.objects.active()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Текущую запись исключает из проверки занятости Booking.clean() (exclude(pk=self.pk)).
+        return self.get_mixin_context(
+            context, title=f"Редактирование бронирования №{self.object.pk}"
+        )
 
 
 @require_POST
