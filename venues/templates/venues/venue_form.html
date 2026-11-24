@@ -1,9 +1,5 @@
 {% extends "base.html" %}
 
-{% block title %}
-    {% if venue %}Редактирование площадки{% else %}Добавление площадки{% endif %} – {{ site_name }}
-{% endblock %}
-
 {% block content %}
     {% if venue %}
         <h1>Редактирование площадки «{{ venue.name }}»</h1>

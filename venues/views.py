@@ -1,12 +1,14 @@
 from datetime import date
 
-from django.contrib import messages
+from django.contrib.messages.views import SuccessMessageMixin
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.generic import CreateView, DetailView, UpdateView
 
 from bookings.models import Booking
 from venue_service.params import parse_iso_date, parse_non_negative_int
 from venue_service.search import search_text
+from venue_service.utils import DataMixin
 from venues.models import Venue
 
 from .forms import VenueForm
@@ -43,39 +45,46 @@ def venues(request):
     )
 
 
-def venue_create(request):
+class VenueCreateView(DataMixin, SuccessMessageMixin, CreateView):
     """Добавление площадки: GET показывает пустую форму, POST проверяет данные и файл."""
-    if request.method == "POST":
-        # Помимо полей формы в неё передаются загруженные файлы (request.FILES).
-        form = VenueForm(request.POST, request.FILES)
-        if form.is_valid():
-            venue = form.save()
-            messages.success(request, "Площадка добавлена.")
-            return redirect(venue)
-    else:
-        form = VenueForm()
 
-    return render(request, "venues/venue_form.html", {"form": form})
+    model = Venue
+    form_class = VenueForm
+    template_name = "venues/venue_form.html"
+    title_page = "Добавление площадки"
+    success_message = "Площадка добавлена."
+    # success_url не задан: после сохранения CreateView перенаправляет на адрес, который
+    # возвращает Venue.get_absolute_url() (страница новой площадки).
+
+    # request.FILES в форму передаёт сам CreateView (get_form_kwargs()).
 
 
-def venue_update(request, slug):
+class VenueUpdateView(DataMixin, SuccessMessageMixin, UpdateView):
     """Редактирование площадки, в том числе замена или удаление изображения."""
-    venue = get_object_or_404(Venue, slug=slug)
-    old_image = venue.image.name
 
-    if request.method == "POST":
-        form = VenueForm(request.POST, request.FILES, instance=venue)
-        if form.is_valid():
-            venue = form.save()
-            # Django не удаляет заменённый файл сам: убираем его, чтобы не копить лишние файлы.
-            if old_image and venue.image.name != old_image:
-                default_storage.delete(old_image)
-            messages.success(request, "Изменения сохранены.")
-            return redirect(venue)
-    else:
-        form = VenueForm(instance=venue)
+    model = Venue
+    form_class = VenueForm
+    template_name = "venues/venue_form.html"
+    context_object_name = "venue"
+    # Площадка выбирается по slug (поле модели slug, параметр маршрута slug).
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+    title_page = "Редактирование площадки"
+    success_message = "Изменения сохранены."
 
-    return render(request, "venues/venue_form.html", {"form": form, "venue": venue})
+    def get_object(self, queryset=None):
+        venue = super().get_object(queryset)
+        # Имя прежнего файла запоминается до проверки формы: ModelForm подставляет в объект
+        # новое значение поля ещё при is_valid().
+        self.old_image = venue.image.name
+        return venue
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Django не удаляет заменённый файл сам: убираем его, чтобы не копить лишние файлы.
+        if self.old_image and self.object.image.name != self.old_image:
+            default_storage.delete(self.old_image)
+        return response
 
 
 def venue_redirect(request, venue_id):
@@ -84,30 +93,29 @@ def venue_redirect(request, venue_id):
     return redirect(venue, permanent=True)
 
 
-def venue_detail(request, slug):
-    # Площадка по slug из адреса; если её нет, get_object_or_404() вернёт ответ 404
-    # (исключение Http404 обрабатывает handler404 проекта).
-    venue = get_object_or_404(Venue, slug=slug)
+class VenueDetailView(DataMixin, DetailView):
+    """Карточка площадки: объект выбирается по slug из адреса."""
 
-    # Обратная связь по related_name: бронирования этой площадки вместе с фестивалями
-    # (select_related), только активные и не в прошлом.
-    upcoming_bookings = (
-        venue.bookings.active()
-        .select_related("festival")
-        .filter(festival__date__gte=date.today())[:UPCOMING_BOOKINGS_LIMIT]
-    )
+    model = Venue
+    template_name = "venues/venue_detail.html"
+    context_object_name = "venue"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+    title_page = "Площадка"
 
-    context = {
-        "venue": venue,
-        "available": venue.is_available_on(date.today()),
-        "upcoming_bookings": upcoming_bookings,
-    }
-
-    return render(
-        request,
-        "venues/venue_detail.html",
-        context,
-    )
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        venue = self.object
+        # Обратная связь по related_name: бронирования этой площадки вместе с фестивалями
+        # (select_related), только активные и не в прошлом.
+        context["upcoming_bookings"] = (
+            venue.bookings.active()
+            .select_related("festival")
+            .filter(festival__date__gte=date.today())[:UPCOMING_BOOKINGS_LIMIT]
+        )
+        context["available"] = venue.is_available_on(date.today())
+        # Заголовок страницы — название площадки (динамическое значение).
+        return self.get_mixin_context(context, title=venue.name)
 
 
 def available(request):
