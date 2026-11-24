@@ -55,6 +55,7 @@ def test_list_view_class_is_configured_as_in_the_task():
         "page_description": "Просмотр, поиск и фильтрация бронирований"
     }
     assert BookingListView.allow_empty is True
+    assert "allow_empty" in vars(BookingListView)  # задан в самом классе
 
 
 def test_pagination_size_comes_from_the_mixin_and_is_not_set_in_the_class():
